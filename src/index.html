@@ -15,11 +15,17 @@
           <button id="new-tab-btn" class="sidebar-btn" title="New Tab">
             <span class="material-icons">add</span>
           </button>
+          <button id="home-btn" class="sidebar-btn" title="Home">
+            <span class="material-icons">home</span>
+          </button>
         </div>
         <div id="tabs-container">
           <!-- Tabs will be dynamically added here -->
         </div>
         <div class="sidebar-bottom">
+          <button id="history-btn" class="sidebar-btn" title="History">
+            <span class="material-icons">history</span>
+          </button>
           <button id="toggle-ui-btn" class="sidebar-btn" title="Hide UI (Alt+H)">
             <span class="material-icons">visibility_off</span>
           </button>
@@ -29,28 +35,43 @@
         </div>
       </div>
 
-      <!-- Navigation bar -->
-      <div id="navbar" class="visible">
-        <div class="nav-controls">
-          <button id="back-btn" title="Back">
-            <span class="material-icons">arrow_back</span>
-          </button>
-          <button id="forward-btn" title="Forward">
-            <span class="material-icons">arrow_forward</span>
-          </button>
-          <button id="refresh-btn" title="Refresh">
-            <span class="material-icons">refresh</span>
-          </button>
+      <!-- Main content area -->
+      <div id="main-content">
+        <!-- Navigation bar -->
+        <div id="navbar" class="visible">
+          <div class="nav-controls">
+            <button id="back-btn" title="Back">
+              <span class="material-icons">arrow_back</span>
+            </button>
+            <button id="forward-btn" title="Forward">
+              <span class="material-icons">arrow_forward</span>
+            </button>
+            <button id="refresh-btn" title="Refresh">
+              <span class="material-icons">refresh</span>
+            </button>
+          </div>
+          <div class="zen-address-bar">
+            <div class="url-icon-container">
+              <div class="site-icon">
+                <span class="material-icons">public</span>
+              </div>
+            </div>
+            <input type="text" id="url-input" placeholder="Search or enter website name">
+            <div class="url-actions">
+              <button id="copy-url-btn" title="Copy URL (Ctrl+Shift+C or Cmd+Shift+C)">
+                <span class="material-icons">content_copy</span>
+              </button>
+              <button id="bookmark-btn" title="Bookmark this page">
+                <span class="material-icons">bookmark_border</span>
+              </button>
+            </div>
+          </div>
         </div>
-        <div class="address-bar">
-          <input type="text" id="url-input" placeholder="Search or enter website name">
+        
+        <!-- Bookmarks Bar -->
+        <div id="bookmarks-bar" class="visible">
+          <!-- Bookmarks will be dynamically added here -->
         </div>
-        <div class="nav-actions">
-          <button id="copy-url-btn" title="Copy URL (Ctrl+Shift+C or Cmd+Shift+C)">
-            <span class="material-icons">content_copy</span>
-          </button>
-        </div>
-      </div>
 
       <!-- Settings panel -->
       <div id="settings-panel" class="panel hidden">
