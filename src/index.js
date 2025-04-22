@@ -2,10 +2,12 @@ const { app, BrowserWindow, BrowserView, ipcMain, clipboard, globalShortcut, Men
 const path = require('node:path');
 const electronLocalshortcut = require('electron-localshortcut');
 const Store = require('electron-store');
-const { ElectronBlocker } = require('@cliqz/adblocker-electron');
+const adBlockEngine = require('adblock-rs');
 const fetch = require('cross-fetch');
-const fs = require('fs');
+const fs = require('fs-extra');
 const url = require('url');
+const axios = require('axios');
+const { ElectronExtensions } = require('electron-extensions');
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) {
@@ -19,14 +21,21 @@ const store = new Store({
     hideUI: false,
     defaultURL: 'homepage',  // Changed to use our custom homepage
     enableAdBlocker: true,
+    showDevTools: true,
+    enableExtensions: true,
     showVerticalTabs: true,
     windowBounds: { width: 1200, height: 800 },
     sidebarVisible: true,
-    showBookmarksBar: true,
-    theme: 'light',
+    showBookmarksBar: false,
+    theme: 'dark',
     searchEngine: 'google',
     lastVisit: null,
-    pinnedTabs: []
+    pinnedTabs: [],
+    restoreSession: true,
+    tabSize: 'medium',
+    httpsOnly: false,
+    blockThirdPartyCookies: true,
+    doNotTrack: false
   }
 });
 
@@ -35,6 +44,17 @@ const historyStore = new Store({
   name: 'history',
   defaults: {
     visits: []
+  }
+});
+
+// Stats store
+const statsStore = new Store({
+  name: 'stats',
+  defaults: {
+    adsBlocked: 0,
+    trackersBlocked: 0,
+    dataSaved: 0,
+    lastReset: Date.now()
   }
 });
 
@@ -58,6 +78,12 @@ const bookmarksStore = new Store({
 let mainWindow;
 let tabManager;
 let adBlocker;
+let extensions;
+let adBlockStats = {
+  adsBlocked: statsStore.get('adsBlocked') || 0,
+  trackersBlocked: statsStore.get('trackersBlocked') || 0,
+  dataSaved: statsStore.get('dataSaved') || 0
+};
 
 // Tab management class
 class TabManager {
@@ -490,6 +516,11 @@ const createWindow = async () => {
   if (store.get('enableAdBlocker')) {
     await setupAdBlocker();
   }
+  
+  // Setup extensions support
+  if (store.get('enableExtensions')) {
+    await setupExtensions();
+  }
 
   // Create directory for assets if it doesn't exist
   const assetsDir = path.join(__dirname, 'assets');
@@ -510,6 +541,13 @@ const createWindow = async () => {
 
   // Register global shortcuts
   setupShortcuts();
+  
+  // Send adblock stats to the renderer
+  setInterval(() => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('adblock-stats-updated', adBlockStats);
+    }
+  }, 5000); // Update every 5 seconds
 
   // Save window size on resize
   mainWindow.on('resize', () => {
@@ -558,16 +596,197 @@ function setupShortcuts() {
       tabManager.closeTab(tabManager.tabs[tabManager.activeTabIndex].id);
     }
   });
+  
+  // Open DevTools for active tab (F12 or Ctrl+Shift+I)
+  electronLocalshortcut.register(mainWindow, ['F12', 'CommandOrControl+Shift+I'], () => {
+    if (store.get('showDevTools') && tabManager.activeTabIndex >= 0 && tabManager.tabs[tabManager.activeTabIndex]) {
+      tabManager.tabs[tabManager.activeTabIndex].view.webContents.openDevTools({ mode: 'detach' });
+    }
+  });
+  
+  // Reload active tab (F5 or Ctrl+R)
+  electronLocalshortcut.register(mainWindow, ['F5', 'CommandOrControl+R'], () => {
+    if (tabManager.activeTabIndex >= 0 && tabManager.tabs[tabManager.activeTabIndex]) {
+      tabManager.tabs[tabManager.activeTabIndex].view.webContents.reload();
+    }
+  });
+  
+  // Hard reload active tab (Ctrl+Shift+R)
+  electronLocalshortcut.register(mainWindow, 'CommandOrControl+Shift+R', () => {
+    if (tabManager.activeTabIndex >= 0 && tabManager.tabs[tabManager.activeTabIndex]) {
+      tabManager.tabs[tabManager.activeTabIndex].view.webContents.reloadIgnoringCache();
+    }
+  });
 }
 
-// Setup ad blocker (Brave browser ad blocker from @cliqz/adblocker)
+// Setup ad blocker (Brave browser adblock-rust implementation)
 async function setupAdBlocker() {
   try {
-    adBlocker = await ElectronBlocker.fromPrebuiltAdsAndTracking(fetch);
-    adBlocker.enableBlockingInSession(session.defaultSession);
-    console.log('Ad blocker initialized successfully');
+    // Create data directory if it doesn't exist
+    const dataDir = path.join(app.getPath('userData'), 'adblock');
+    await fs.ensureDir(dataDir);
+    
+    // Initialize the adblock engine
+    const enginePath = path.join(dataDir, 'adblock.dat');
+    const adBlockClient = new adBlockEngine.Engine({
+      engineLocation: enginePath,
+      fetchLists: true, // Automatically fetch filter lists
+      debugMode: false
+    });
+    
+    // Download filter lists if needed
+    const easyListUrl = 'https://easylist.to/easylist/easylist.txt';
+    const easyPrivacyUrl = 'https://easylist.to/easylist/easyprivacy.txt';
+    
+    console.log('Downloading and initializing filter lists...');
+    try {
+      // Setup filter lists
+      const easyListResponse = await axios.get(easyListUrl);
+      const easyPrivacyResponse = await axios.get(easyPrivacyUrl);
+      
+      adBlockClient.addFilterList({
+        uuid: 'easylist',
+        url: easyListUrl,
+        title: 'EasyList',
+        supportURL: 'https://easylist.to/',
+        base64Content: Buffer.from(easyListResponse.data).toString('base64')
+      });
+      
+      adBlockClient.addFilterList({
+        uuid: 'easyprivacy',
+        url: easyPrivacyUrl,
+        title: 'EasyPrivacy',
+        supportURL: 'https://easylist.to/',
+        base64Content: Buffer.from(easyPrivacyResponse.data).toString('base64')
+      });
+      
+      // Save the engine file
+      adBlockClient.save();
+      
+      console.log('AdBlock engine initialized successfully');
+    } catch (err) {
+      console.error('Error initializing filter lists:', err);
+    }
+    
+    // Setup web request filtering
+    session.defaultSession.webRequest.onBeforeRequest({ urls: ['*://*/*'] }, (details, callback) => {
+      const url = details.url;
+      const sourceUrl = details.referrer || '';
+      const resourceType = details.resourceType;
+      
+      // Check if the request should be blocked
+      const shouldBlock = adBlockClient.shouldBlock(url, sourceUrl, resourceType);
+      
+      if (shouldBlock) {
+        // Update stats
+        adBlockStats.adsBlocked++;
+        if (resourceType === 'image' || resourceType === 'media') {
+          // Estimate data saved (rough estimate for demonstration)
+          adBlockStats.dataSaved += Math.floor(Math.random() * 50) + 10; // Random KB between 10-60
+        }
+        if (url.includes('tracker') || url.includes('analytics') || resourceType === 'xhr') {
+          adBlockStats.trackersBlocked++;
+        }
+        
+        // Update stats store every 10 blocks for performance
+        if (adBlockStats.adsBlocked % 10 === 0) {
+          statsStore.set('adsBlocked', adBlockStats.adsBlocked);
+          statsStore.set('trackersBlocked', adBlockStats.trackersBlocked);
+          statsStore.set('dataSaved', adBlockStats.dataSaved);
+          
+          // Notify renderer of updated stats
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('adblock-stats-updated', adBlockStats);
+          }
+        }
+        
+        callback({ cancel: true });
+      } else {
+        callback({ cancel: false });
+      }
+    });
+    
+    // Set up content blocking if HTTPS-only mode is enabled
+    if (store.get('httpsOnly')) {
+      setupHttpsOnlyMode();
+    }
+    
+    // Set up blocking for third-party cookies if enabled
+    if (store.get('blockThirdPartyCookies')) {
+      session.defaultSession.cookies.set({
+        blockThirdPartyCookies: true
+      });
+    }
+    
+    // Set up Do Not Track header if enabled
+    if (store.get('doNotTrack')) {
+      session.defaultSession.webRequest.onBeforeSendHeaders((details, callback) => {
+        details.requestHeaders['DNT'] = '1';
+        callback({ requestHeaders: details.requestHeaders });
+      });
+    }
+    
+    adBlocker = adBlockClient;
   } catch (error) {
     console.error('Failed to initialize ad blocker:', error);
+  }
+}
+
+// Setup HTTPS-only mode
+function setupHttpsOnlyMode() {
+  session.defaultSession.webRequest.onBeforeRequest({ urls: ['http://*/*'] }, (details, callback) => {
+    const httpsUrl = details.url.replace('http://', 'https://');
+    callback({ redirectURL: httpsUrl });
+  });
+}
+
+// Setup extensions support
+async function setupExtensions() {
+  if (!store.get('enableExtensions')) {
+    return;
+  }
+  
+  try {
+    // Initialize extensions directory
+    const extensionsDir = path.join(app.getPath('userData'), 'extensions');
+    await fs.ensureDir(extensionsDir);
+    
+    // Initialize electron-extensions
+    extensions = new ElectronExtensions({
+      session: session.defaultSession,
+      createTab: (details) => {
+        const tabId = tabManager.createTab(details.url);
+        return tabId;
+      },
+      selectTab: (tabId) => {
+        tabManager.activateTab(tabId);
+      },
+      removeTab: (tabId) => {
+        tabManager.closeTab(tabId);
+      },
+      createWindow: (details) => {
+        // Not implemented yet
+      }
+    });
+    
+    // Load installed extensions
+    const extensionsList = await fs.readdir(extensionsDir);
+    for (const extFolder of extensionsList) {
+      const extPath = path.join(extensionsDir, extFolder);
+      const stats = await fs.stat(extPath);
+      if (stats.isDirectory()) {
+        try {
+          await extensions.load(extPath);
+          console.log(`Loaded extension: ${extFolder}`);
+        } catch (err) {
+          console.error(`Failed to load extension ${extFolder}:`, err);
+        }
+      }
+    }
+    
+    console.log('Extensions support initialized');
+  } catch (error) {
+    console.error('Failed to initialize extensions support:', error);
   }
 }
 
@@ -594,10 +813,97 @@ ipcMain.handle('get-settings', () => {
 
 ipcMain.handle('update-setting', (event, { key, value }) => {
   store.set(key, value);
+  
+  // Handle special settings that need immediate action
+  if (key === 'enableAdBlocker' && value === false) {
+    // Disable ad blocker
+    session.defaultSession.webRequest.onBeforeRequest(null);
+  } else if (key === 'enableAdBlocker' && value === true) {
+    // Re-enable ad blocker
+    setupAdBlocker();
+  } else if (key === 'blockThirdPartyCookies') {
+    session.defaultSession.cookies.set({
+      blockThirdPartyCookies: value
+    });
+  } else if (key === 'httpsOnly') {
+    if (value) {
+      setupHttpsOnlyMode();
+    } else {
+      session.defaultSession.webRequest.onBeforeRequest(null);
+    }
+  }
+  
   return true;
 });
 
 ipcMain.handle('reset-settings', () => {
   store.clear();
   return store.store;
+});
+
+ipcMain.handle('get-adblock-stats', () => {
+  return adBlockStats;
+});
+
+ipcMain.handle('reset-adblock-stats', () => {
+  adBlockStats = {
+    adsBlocked: 0,
+    trackersBlocked: 0,
+    dataSaved: 0
+  };
+  
+  statsStore.set('adsBlocked', 0);
+  statsStore.set('trackersBlocked', 0);
+  statsStore.set('dataSaved', 0);
+  statsStore.set('lastReset', Date.now());
+  
+  return adBlockStats;
+});
+
+ipcMain.handle('get-extensions', async () => {
+  if (!extensions) {
+    return [];
+  }
+  
+  const extensionsList = extensions.getExtensions();
+  return Object.values(extensionsList).map(ext => ({
+    id: ext.id,
+    name: ext.name,
+    version: ext.version,
+    description: ext.description,
+    enabled: ext.enabled,
+    icon: ext.icon
+  }));
+});
+
+ipcMain.handle('toggle-extension', async (event, { id, enabled }) => {
+  if (!extensions) {
+    return false;
+  }
+  
+  try {
+    if (enabled) {
+      await extensions.enable(id);
+    } else {
+      await extensions.disable(id);
+    }
+    return true;
+  } catch (err) {
+    console.error('Failed to toggle extension:', err);
+    return false;
+  }
+});
+
+ipcMain.handle('install-extension', async (event, crxPath) => {
+  if (!extensions) {
+    return { success: false, error: 'Extensions not enabled' };
+  }
+  
+  try {
+    const extensionId = await extensions.install(crxPath);
+    return { success: true, extensionId };
+  } catch (err) {
+    console.error('Failed to install extension:', err);
+    return { success: false, error: err.message };
+  }
 });
