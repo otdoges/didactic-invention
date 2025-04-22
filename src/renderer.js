@@ -34,29 +34,33 @@ document.addEventListener('DOMContentLoaded', () => {
   const alwaysShowTabsCheckbox = document.getElementById('always-show-tabs');
   const settingsNavItems = document.querySelectorAll('.settings-nav-item');
 
-  // Global variables
+  // State variables
   let activeTabId = null;
-  let tabs = {};
+  let tabs = [];
   let bookmarks = [];
   let history = [];
+  let currentFavicon = null;
   let isNavbarHidden = false;
   let isFullscreen = false;
   let settingsVisible = false;
+  let historyVisible = false;
   let isDarkMode = false;
   let loadingTimers = {};
   let mediaPlayers = [];
-
+  
   // Check system preference for dark mode
   const prefersDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
 
   // Initialize the application
-  async function initialize() {
+  async function init() {
     // Load settings
     const settings = await window.browserAPI.getSettings();
-    toggleAdBlocker.checked = settings.adBlocker || false;
-    defaultUrl.value = settings.defaultUrl || 'homepage';
-    alwaysShowTabs.checked = settings.alwaysShowTabs || false;
-    bookmarkBarToggle.checked = settings.showBookmarkBar !== false; // Default to true
+    
+    // Update UI based on settings
+    if (toggleAdBlockerCheckbox) toggleAdBlockerCheckbox.checked = settings.adBlocker || false;
+    if (defaultUrlInput) defaultUrlInput.value = settings.defaultUrl || 'homepage';
+    if (alwaysShowTabsCheckbox) alwaysShowTabsCheckbox.checked = settings.alwaysShowTabs || false;
+    if (bookmarkBarToggle) bookmarkBarToggle.checked = settings.showBookmarkBar !== false; // Default to true
 
     // Set dark mode based on settings or system preference
     isDarkMode = settings.darkMode !== undefined ? settings.darkMode : prefersDarkMode;
@@ -64,7 +68,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (themeSwitch) {
       themeSwitch.classList.toggle('dark', isDarkMode);
-      themeSwitch.addEventListener('click', toggleDarkMode);
     }
 
     // Create initial tab
@@ -74,43 +77,101 @@ document.addEventListener('DOMContentLoaded', () => {
     await loadBookmarks();
     await loadHistory();
 
-    // Initialize settings navigation
-    initSettingsNavigation();
+    // Set up event listeners
+    setupEventListeners();
+
+    // Set up IPC listeners
+    setupIPCListeners();
   }
 
   // Set up event listeners
   function setupEventListeners() {
     // New tab button
-    document.getElementById('new-tab-btn').addEventListener('click', createNewTab);
+    const newTabBtn = document.getElementById('new-tab-btn');
+    if (newTabBtn) {
+      newTabBtn.addEventListener('click', createNewTab);
+    }
 
     // Navigation buttons
-    document.getElementById('back-btn').addEventListener('click', goBack);
-    document.getElementById('forward-btn').addEventListener('click', goForward);
-    document.getElementById('reload-btn').addEventListener('click', reload);
-    document.getElementById('home-btn').addEventListener('click', goHome);
+    const backBtn = document.getElementById('back-btn');
+    if (backBtn) {
+      backBtn.addEventListener('click', goBack);
+    }
+
+    const forwardBtn = document.getElementById('forward-btn');
+    if (forwardBtn) {
+      forwardBtn.addEventListener('click', goForward);
+    }
+
+    const reloadBtn = document.getElementById('reload-btn');
+    if (reloadBtn) {
+      reloadBtn.addEventListener('click', reload);
+    }
+
+    const homeBtn = document.getElementById('home-btn');
+    if (homeBtn) {
+      homeBtn.addEventListener('click', goHome);
+    }
 
     // Address bar
-    addressInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        navigateToUrl(addressInput.value);
-      }
-    });
+    if (addressInput) {
+      addressInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          navigateToUrl(addressInput.value);
+        }
+      });
+    }
 
-    // Settings panels
-    settingsBtn.addEventListener('click', openSettingsModal);
-    closeSettingsBtn.addEventListener('click', () => togglePanel('settings-panel'));
-    closeSettingsModalBtn.addEventListener('click', closeSettingsModal);
-    settingsOverlay.addEventListener('click', closeSettingsModal);
+    // Settings panel
+    if (settingsBtn) {
+      settingsBtn.addEventListener('click', toggleSettings);
+    }
+
+    if (closeSettingsBtn) {
+      closeSettingsBtn.addEventListener('click', toggleSettings);
+    }
+
+    // History panel
+    const historyBtn = document.getElementById('history-btn');
+    if (historyBtn) {
+      historyBtn.addEventListener('click', toggleHistory);
+    }
+
+    if (closeHistoryBtn) {
+      closeHistoryBtn.addEventListener('click', toggleHistory);
+    }
 
     // Settings changes
-    toggleAdBlocker.addEventListener('change', updateSettings);
-    defaultUrl.addEventListener('change', updateSettings);
-    alwaysShowTabs.addEventListener('change', updateSettings);
-    bookmarkBarToggle.addEventListener('change', updateSettings);
+    if (toggleAdBlocker) {
+      toggleAdBlocker.addEventListener('change', updateSettings);
+    }
+
+    if (defaultUrl) {
+      defaultUrl.addEventListener('change', updateSettings);
+    }
+
+    if (alwaysShowTabs) {
+      alwaysShowTabs.addEventListener('change', updateSettings);
+    }
+
+    if (bookmarkBarToggle) {
+      bookmarkBarToggle.addEventListener('change', updateSettings);
+    }
+
+    // Theme switch
+    if (themeSwitch) {
+      themeSwitch.addEventListener('click', toggleDarkMode);
+    }
 
     // Clear history button
     if (clearHistoryBtn) {
       clearHistoryBtn.addEventListener('click', clearHistory);
+    }
+
+    // Bookmark button
+    const bookmarkBtn = document.getElementById('bookmark-btn');
+    if (bookmarkBtn) {
+      bookmarkBtn.addEventListener('click', addCurrentPageToBookmarks);
     }
 
     // Keyboard shortcuts
@@ -118,18 +179,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Context menu for tabs
     document.addEventListener('click', () => {
-      tabContextMenu.style.display = 'none';
+      if (tabContextMenu) {
+        tabContextMenu.style.display = 'none';
+      }
     });
 
-    menuNewTab.addEventListener('click', createNewTab);
-    menuCloseTab.addEventListener('click', () => {
-      closeTab(menuCloseTab.dataset.tabId);
-      tabContextMenu.style.display = 'none';
-    });
+    if (menuNewTab) {
+      menuNewTab.addEventListener('click', createNewTab);
+    }
+
+    if (menuCloseTab) {
+      menuCloseTab.addEventListener('click', () => {
+        closeTab(menuCloseTab.dataset.tabId);
+        tabContextMenu.style.display = 'none';
+      });
+    }
   }
 
   // Initialize
-  initialize();
+  init();
 
   // Functions
   async function init() {
@@ -872,7 +940,7 @@ document.addEventListener('DOMContentLoaded', () => {
       sidebar.classList.add('hidden');
       navbar.classList.add('sidebar-hidden');
     }
-    
+
     // Update UI visibility (hide everything mode)
     if (settings.hideUI) {
       sidebar.classList.add('hidden');
