@@ -2,10 +2,11 @@
 <html>
   <head>
     <meta charset="UTF-8" />
-    <title>Electron Browser</title>
+    <title>Zen Browser</title>
     <link rel="stylesheet" href="index.css" />
     <!-- Material Icons for a modern UI -->
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
   </head>
   <body>
     <!-- Loading bar - appears at the top of the browser during page loading -->
@@ -14,23 +15,46 @@
     <div id="browser">
       <!-- Vertical sidebar with tabs -->
       <div id="sidebar" class="visible">
-        <div class="sidebar-top">
-          <button id="new-tab-btn" class="sidebar-btn" title="New Tab">
-            <span class="material-icons">add</span>
-          </button>
-          <button id="home-btn" class="sidebar-btn" title="Home">
-            <span class="material-icons">home</span>
-          </button>
+        <div class="sidebar-header">
+          <div class="workspace-section">
+            <div class="workspace-info">
+              <span class="material-icons workspace-icon">public</span>
+              <span class="workspace-name">Default Workspace</span>
+            </div>
+          </div>
+          <div class="workspace-section zen-section">
+            <div class="workspace-info">
+              <span class="material-icons workspace-icon">travel_explore</span>
+              <span class="workspace-name">Zen Browser</span>
+            </div>
+          </div>
+          <div class="workspace-section">
+            <div class="workspace-info user-profile">
+              <span class="material-icons workspace-icon">account_circle</span>
+              <span class="workspace-name">Zen (@zen_browser)</span>
+            </div>
+          </div>
         </div>
+        <button id="new-tab-btn" class="new-tab-button" title="New Tab">
+          <span class="material-icons">add</span>
+          <span>New Tab</span>
+        </button>
         <div id="tabs">
           <!-- Tabs will be dynamically added here -->
         </div>
         <div class="sidebar-bottom">
+          <div class="adblock-counter" title="Ads blocked">
+            <span class="material-icons">block</span>
+            <span id="ads-blocked-count">0</span>
+          </div>
           <button id="history-btn" class="sidebar-btn" title="History">
             <span class="material-icons">history</span>
           </button>
-          <button id="toggle-ui-btn" class="sidebar-btn" title="Hide UI (Alt+H)">
-            <span class="material-icons">visibility_off</span>
+          <button id="devtools-btn" class="sidebar-btn" title="DevTools">
+            <span class="material-icons">code</span>
+          </button>
+          <button id="extensions-btn" class="sidebar-btn" title="Extensions">
+            <span class="material-icons">extension</span>
           </button>
           <button id="settings-btn" class="sidebar-btn" title="Settings">
             <span class="material-icons">settings</span>
@@ -55,11 +79,19 @@
           </div>
           
           <div id="address-bar">
-            <span class="material-icons">public</span>
+            <span class="material-icons url-icon">public</span>
             <input type="text" id="address-input" placeholder="Search or enter web address" />
-            <button id="bookmark-btn" title="Bookmark this page">
-              <span class="material-icons">bookmark_border</span>
-            </button>
+            <div class="address-actions">
+              <button id="bookmark-btn" title="Bookmark this page">
+                <span class="material-icons">bookmark_border</span>
+              </button>
+              <button id="reader-mode-btn" title="Reader mode">
+                <span class="material-icons">chrome_reader_mode</span>
+              </button>
+              <button id="security-info-btn" title="Security information">
+                <span class="material-icons">security</span>
+              </button>
+            </div>
           </div>
         </div>
         
@@ -192,6 +224,26 @@
         </div>
       </div>
       
+      <!-- Extensions panel -->
+      <div id="extensions-panel" class="panel hidden">
+        <div class="panel-header">
+          <h2>Extensions</h2>
+          <button id="close-extensions-btn" class="close-btn">
+            <span class="material-icons">close</span>
+          </button>
+        </div>
+        <div class="panel-content">
+          <div class="extensions-list" id="extensions-list">
+            <!-- Extensions will be dynamically added here -->
+            <div class="extension-empty-state">
+              <span class="material-icons">extension</span>
+              <p>No extensions installed</p>
+              <button id="install-extension-btn" class="primary-btn">Install Extension</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Settings panel - using simple panel design -->  
       <div id="settings-panel" class="panel hidden">
         <div class="panel-header">
@@ -200,27 +252,59 @@
             <span class="material-icons">close</span>
           </button>
         </div>
-        <div class="panel-content">
-          <div class="settings-section">
-            <h3>General</h3>
-            <div class="setting-item">
-              <label for="default-url">Default URL</label>
-              <input type="text" id="default-url" placeholder="https://www.google.com">
+        <div class="panel-content settings-container">
+          <div class="settings-sidebar">
+            <div class="settings-nav-item active" data-section="general">
+              <span class="material-icons">tune</span>
+              <span>General</span>
             </div>
-            <div class="setting-item">
-              <label for="search-engine">Default Search Engine</label>
-              <select id="search-engine">
-                <option value="google">Google</option>
-                <option value="bing">Bing</option>
-                <option value="duckduckgo">DuckDuckGo</option>
-                <option value="yahoo">Yahoo</option>
-              </select>
+            <div class="settings-nav-item" data-section="privacy">
+              <span class="material-icons">shield</span>
+              <span>Privacy & Security</span>
             </div>
-            <div class="setting-item">
-              <label>
-                <input type="checkbox" id="toggle-ad-blocker">
-                Enable Ad Blocker
-              </label>
+            <div class="settings-nav-item" data-section="appearance">
+              <span class="material-icons">palette</span>
+              <span>Appearance</span>
+            </div>
+            <div class="settings-nav-item" data-section="advanced">
+              <span class="material-icons">build</span>
+              <span>Advanced</span>
+            </div>
+            <div class="settings-nav-item" data-section="about">
+              <span class="material-icons">info</span>
+              <span>About</span>
+            </div>
+          </div>
+
+          <div class="settings-sections">
+            <div class="settings-section active" id="general-section">
+              <h3>General</h3>
+              <div class="setting-item">
+                <label for="default-url">Default URL</label>
+                <input type="text" id="default-url" placeholder="https://www.google.com">
+              </div>
+              <div class="setting-item">
+                <label for="search-engine">Default Search Engine</label>
+                <select id="search-engine">
+                  <option value="google">Google</option>
+                  <option value="bing">Bing</option>
+                  <option value="duckduckgo">DuckDuckGo</option>
+                  <option value="brave">Brave Search</option>
+                  <option value="yahoo">Yahoo</option>
+                </select>
+              </div>
+              <div class="setting-item checkbox-item">
+                <label class="toggle-label">
+                  <input type="checkbox" id="restore-session">
+                  <span class="setting-label">Restore previous session on startup</span>
+                </label>
+              </div>
+              <div class="setting-item checkbox-item">
+                <label class="toggle-label">
+                  <input type="checkbox" id="default-browser-check">
+                  <span class="setting-label">Check if Zen Browser is your default browser</span>
+                </label>
+              </div>
             </div>
           </div>
           <div class="settings-section">
@@ -286,8 +370,22 @@
           </div>
           <div class="settings-section">
             <h3>About</h3>
-            <p>Electron Browser v1.0.0</p>
-            <p>A Chrome-based browser with vertical tabs and privacy features.</p>
+            <p>Zen Browser v1.0.0</p>
+            <p>A modern Electron browser with vertical tabs and advanced privacy features.</p>
+            <div class="about-stats">
+              <div class="stat-item">
+                <span class="stat-label">Ads Blocked</span>
+                <span class="stat-value" id="settings-ads-blocked">0</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Trackers Blocked</span>
+                <span class="stat-value" id="settings-trackers-blocked">0</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Data Saved</span>
+                <span class="stat-value" id="settings-data-saved">0 KB</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
