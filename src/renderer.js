@@ -1,4 +1,4 @@
-// Main Renderer process code
+// Zen Browser Renderer Process - Main UI handling
 document.addEventListener('DOMContentLoaded', () => {
   // Document elements
   const browser = document.getElementById('browser');
@@ -57,31 +57,30 @@ document.addEventListener('DOMContentLoaded', () => {
     const settings = await window.browserAPI.getSettings();
     
     // Update UI based on settings
-    if (toggleAdBlockerCheckbox) toggleAdBlockerCheckbox.checked = settings.adBlocker || false;
-    if (defaultUrlInput) defaultUrlInput.value = settings.defaultUrl || 'homepage';
-    if (alwaysShowTabsCheckbox) alwaysShowTabsCheckbox.checked = settings.alwaysShowTabs || false;
-    if (bookmarkBarToggle) bookmarkBarToggle.checked = settings.showBookmarkBar !== false; // Default to true
+    if (toggleAdBlocker) toggleAdBlocker.checked = settings.enableAdBlocker !== false; // Default to true
+    if (defaultUrl) defaultUrl.value = settings.defaultUrl || 'homepage';
+    if (alwaysShowTabs) alwaysShowTabs.checked = settings.showVerticalTabs !== false; // Default to true
 
     // Set dark mode based on settings or system preference
-    isDarkMode = settings.darkMode !== undefined ? settings.darkMode : prefersDarkMode;
-    applyTheme();
-
-    if (themeSwitch) {
-      themeSwitch.classList.toggle('dark', isDarkMode);
-    }
-
-    // Create initial tab
-    createNewTab();
-
-    // Load bookmarks and history
-    await loadBookmarks();
-    await loadHistory();
+    isDarkMode = settings.theme === 'dark';
+    document.body.classList.toggle('dark-theme', isDarkMode);
 
     // Set up event listeners
     setupEventListeners();
 
     // Set up IPC listeners
     setupIPCListeners();
+    
+    // Get adblock stats
+    try {
+      const stats = await window.browserAPI.getAdBlockStats();
+      updateAdBlockStats(stats);
+    } catch (error) {
+      console.error('Failed to get adblock stats:', error);
+    }
+    
+    // Initial tabs refresh
+    refreshTabs();
   }
 
   // Set up event listeners
@@ -89,7 +88,20 @@ document.addEventListener('DOMContentLoaded', () => {
     // New tab button
     const newTabBtn = document.getElementById('new-tab-btn');
     if (newTabBtn) {
-      newTabBtn.addEventListener('click', createNewTab);
+      newTabBtn.addEventListener('click', () => {
+        window.browserAPI.createTab();
+      });
+    }
+
+    // DevTools button
+    const devtoolsBtn = document.getElementById('devtools-btn');
+    if (devtoolsBtn) {
+      devtoolsBtn.addEventListener('click', () => {
+        if (activeTabId) {
+          window.browserAPI.openDevTools(activeTabId);
+          showNotification('DevTools opened');
+        }
+      });
     }
 
     // Navigation buttons
@@ -124,46 +136,77 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Settings panel
     if (settingsBtn) {
-      settingsBtn.addEventListener('click', toggleSettings);
+      settingsBtn.addEventListener('click', () => {
+        // Close extensions panel if open
+        if (extensionsVisible && extensionsPanel) {
+          extensionsPanel.classList.remove('visible');
+          extensionsVisible = false;
+        }
+
+        settingsPanel.classList.toggle('visible');
+        settingsVisible = !settingsVisible;
+      });
     }
 
+    // Close settings button
     if (closeSettingsBtn) {
-      closeSettingsBtn.addEventListener('click', toggleSettings);
+      closeSettingsBtn.addEventListener('click', () => {
+        settingsPanel.classList.remove('visible');
+        settingsVisible = false;
+      });
     }
 
-    // History panel
-    const historyBtn = document.getElementById('history-btn');
-    if (historyBtn) {
-      historyBtn.addEventListener('click', toggleHistory);
+    // Extensions button
+    const extensionsBtn = document.getElementById('extensions-btn');
+    if (extensionsBtn) {
+      extensionsBtn.addEventListener('click', () => {
+        // Close settings panel if open
+        if (settingsVisible && settingsPanel) {
+          settingsPanel.classList.remove('visible');
+          settingsVisible = false;
+        }
+
+        extensionsPanel.classList.toggle('visible');
+        extensionsVisible = !extensionsVisible;
+      });
     }
 
-    if (closeHistoryBtn) {
-      closeHistoryBtn.addEventListener('click', toggleHistory);
+    // Close extensions button
+    const closeExtensionsBtn = document.getElementById('close-extensions-btn');
+    if (closeExtensionsBtn) {
+      closeExtensionsBtn.addEventListener('click', () => {
+        extensionsPanel.classList.remove('visible');
+        extensionsVisible = false;
+      });
     }
 
-    // Settings changes
-    if (toggleAdBlocker) {
-      toggleAdBlocker.addEventListener('change', updateSettings);
+    // Settings navigation
+    if (settingsNavItems) {
+      settingsNavItems.forEach(item => {
+        item.addEventListener('click', () => {
+          const section = item.getAttribute('data-section');
+
+          // Update active nav item
+          settingsNavItems.forEach(navItem => {
+            navItem.classList.toggle('active', navItem === item);
+          });
+
+          // Show the corresponding section
+          const sections = document.querySelectorAll('.settings-section');
+          sections.forEach(sec => {
+            sec.classList.toggle('active', sec.id === section + '-section');
+          });
+        });
+      });
     }
 
-    if (defaultUrl) {
-      defaultUrl.addEventListener('change', updateSettings);
-    }
-
-    if (alwaysShowTabs) {
-      alwaysShowTabs.addEventListener('change', updateSettings);
-    }
-
-    if (bookmarkBarToggle) {
-      bookmarkBarToggle.addEventListener('change', updateSettings);
-    }
-
-    // Theme switch
-    if (themeSwitch) {
-      themeSwitch.addEventListener('click', toggleDarkMode);
-    }
+    // Close history button
+    closeHistoryBtn.addEventListener('click', () => {
+      closeHistory();
+    });
 
     // Clear history button
+    const clearHistoryBtn = document.getElementById('clear-history-btn');
     if (clearHistoryBtn) {
       clearHistoryBtn.addEventListener('click', clearHistory);
     }
@@ -194,6 +237,63 @@ document.addEventListener('DOMContentLoaded', () => {
         tabContextMenu.style.display = 'none';
       });
     }
+  }
+
+  // Setup all IPC event listeners
+  function setupIPCListeners() {
+    // AdBlock stats updates
+    window.browserAPI.onAdBlockStatsUpdated((stats) => {
+      updateAdBlockStats(stats);
+    });
+
+    // Tab updates
+    window.browserAPI.onTabCreated((tab) => {
+      refreshTabs();
+    });
+
+    window.browserAPI.onTabClosed((tabId) => {
+      refreshTabs();
+    });
+
+    window.browserAPI.onTabUpdated((tab) => {
+      refreshTabs();
+
+      // Update address bar if this is the active tab
+      if (tab.isActive) {
+        addressInput.value = tab.url;
+        currentFavicon = tab.favicon;
+      }
+    });
+
+    window.browserAPI.onTabActivated((tabId) => {
+      activeTabId = tabId;
+      refreshTabs();
+
+      // Update address bar
+      const tab = tabs.find(t => t.id === tabId);
+      if (tab) {
+        addressInput.value = tab.url;
+        currentFavicon = tab.favicon;
+      }
+    });
+
+    window.browserAPI.onSidebarToggled((visible) => {
+      sidebar.classList.toggle('hidden', !visible);
+      navbar.classList.toggle('sidebar-hidden', !visible);
+    });
+
+    window.browserAPI.onBookmarksBarToggled((visible) => {
+      const bookmarksBar = document.getElementById('bookmark-bar');
+      if (bookmarksBar) {
+        bookmarksBar.classList.toggle('hidden', !visible);
+      }
+    });
+
+    window.browserAPI.onUIVisibilityChanged((data) => {
+      isNavbarHidden = data.hidden;
+      navbar.classList.toggle('hidden', data.hidden);
+      sidebar.classList.toggle('hidden', data.hidden);
+    });
   }
 
   // Initialize
@@ -271,21 +371,21 @@ document.addEventListener('DOMContentLoaded', () => {
     // Back button
     backBtn.addEventListener('click', () => {
       if (activeTabId) {
-        sendMessageToActiveTab('history-go-back');
+        window.browserAPI.goBack(activeTabId);
       }
     });
 
     // Forward button
     forwardBtn.addEventListener('click', () => {
       if (activeTabId) {
-        sendMessageToActiveTab('history-go-forward');
+        window.browserAPI.goForward(activeTabId);
       }
     });
 
     // Refresh button
     refreshBtn.addEventListener('click', () => {
       if (activeTabId) {
-        sendMessageToActiveTab('reload');
+        window.browserAPI.reload(activeTabId);
       }
     });
 
@@ -373,51 +473,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Setup all IPC event listeners
-  function setupIPCListeners() {
-    // Tab created event
-    window.browserAPI.onTabCreated((event, data) => {
-      // Update local tabs array
-      refreshTabs();
-    });
-
-    // Tab closed event
-    window.browserAPI.onTabClosed((event, data) => {
-      // Update local tabs array
-      refreshTabs();
-    });
-
-    // Tab activated event
-    window.browserAPI.onTabActivated((event, data) => {
-      activeTabId = data.id;
-      updateActiveTab();
-      updateUrlBar();
-      updateBookmarkButtonState();
-    });
-
-    // Tab updated event
-    window.browserAPI.onTabUpdated((event, data) => {
-      updateTab(data);
-      if (data.id === activeTabId) {
-        if (data.url) {
-          updateUrlBar();
-          updateBookmarkButtonState();
-        }
-        if (data.favicon) {
-          currentFavicon = data.favicon;
-          updateSiteIcon(data.favicon);
-        }
-      }
-    });
-
-    // Get search engine URL
-    function getSearchEngineUrl() {
-      const searchEngineSelect = document.getElementById('search-engine');
-      let searchEngine = 'https://www.google.com/search?q=';
-      
-      if (searchEngineSelect) {
-        const engine = searchEngineSelect.value;
-        switch (engine) {
           case 'bing':
             searchEngine = 'https://www.bing.com/search?q=';
             break;
@@ -633,52 +688,158 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Update settings
-  async function updateSettings() {
-    const settings = {
-      adBlocker: toggleAdBlocker && toggleAdBlocker.checked,
-      defaultUrl: defaultUrl && defaultUrl.value || 'homepage',
-      alwaysShowTabs: alwaysShowTabs && alwaysShowTabs.checked,
-      darkMode: isDarkMode,
-      showBookmarkBar: bookmarkBarToggle && bookmarkBarToggle.checked
-    };
-    
-    // Update bookmark bar visibility
-    const bookmarkBar = document.getElementById('bookmark-bar');
-    if (bookmarkBar) {
-      if (settings.showBookmarkBar) {
-        bookmarkBar.classList.remove('hidden');
-      } else {
-        bookmarkBar.classList.add('hidden');
-      }
-    }
-    
-    await window.browserAPI.saveSettings(settings);
-    showNotification('Settings updated', 'success');
-  }
-
-  // Toggle dark mode
-  function toggleDarkMode() {
-    isDarkMode = !isDarkMode;
-    applyTheme();
-    
-    // Update theme switch appearance
-    if (themeSwitch) {
-      themeSwitch.classList.toggle('dark', isDarkMode);
-    }
-    
-    // Save the setting
-    updateSettings();
-  }
-
-  // Apply theme based on dark mode setting
-  function applyTheme() {
-    document.body.classList.toggle('dark-theme', isDarkMode);
-    
-    // Update webviews with appropriate theme
-    document.querySelectorAll('webview').forEach(webview => {
-      webview.send('theme-changed', { isDarkMode });
+  // Settings form handlers
+  if (toggleAdBlocker) {
+    toggleAdBlocker.addEventListener('change', () => {
+      window.browserAPI.saveSetting('enableAdBlocker', toggleAdBlocker.checked);
+      showNotification(`Ad blocker ${toggleAdBlocker.checked ? 'enabled' : 'disabled'}`);
     });
+  }
+  
+  if (defaultUrl) {
+    defaultUrl.addEventListener('change', () => {
+      window.browserAPI.saveSetting('defaultURL', defaultUrl.value);
+      showNotification('Default URL updated');
+    });
+  }
+  
+  if (alwaysShowTabs) {
+    alwaysShowTabs.addEventListener('change', () => {
+      window.browserAPI.saveSetting('showVerticalTabs', alwaysShowTabs.checked);
+      sidebar.classList.toggle('hidden', !alwaysShowTabs.checked);
+      showNotification(`Vertical tabs ${alwaysShowTabs.checked ? 'enabled' : 'disabled'}`);
+    });
+  }
+  
+  // Handle other checkbox settings
+  document.querySelectorAll('.checkbox-item input[type="checkbox"]').forEach(checkbox => {
+    if (!checkbox.id || ['toggle-ad-blocker', 'always-show-tabs', 'bookmark-bar-toggle'].includes(checkbox.id)) {
+      return; // Skip already handled checkboxes
+    }
+    
+    checkbox.addEventListener('change', () => {
+      // Convert kebab-case to camelCase for setting key
+      const key = checkbox.id.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
+      window.browserAPI.saveSetting(key, checkbox.checked);
+      showNotification(`${key} ${checkbox.checked ? 'enabled' : 'disabled'}`);
+    });
+  });
+  
+  // Handle selects
+  document.querySelectorAll('select').forEach(select => {
+    if (!select.id) return;
+    
+    select.addEventListener('change', () => {
+      // Convert kebab-case to camelCase for setting key
+      const key = select.id.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
+      window.browserAPI.saveSetting(key, select.value);
+      showNotification(`${key} set to ${select.value}`);
+    });
+  });
+  
+  // Clear browsing data button
+  const clearBrowsingDataBtn = document.getElementById('clear-browsing-data-btn');
+  if (clearBrowsingDataBtn) {
+    clearBrowsingDataBtn.addEventListener('click', async () => {
+      await window.browserAPI.clearHistory();
+      showNotification('Browsing data cleared');
+    });
+  }
+  
+  // Reset adblock stats
+  const resetAdblockStatsBtn = document.getElementById('reset-adblock-stats-btn');
+  if (resetAdblockStatsBtn) {
+    resetAdblockStatsBtn.addEventListener('click', async () => {
+      const stats = await window.browserAPI.resetAdBlockStats();
+      updateAdBlockStats(stats);
+      showNotification('AdBlock statistics reset');
+    });
+  }
+
+  // Update AdBlock stats UI
+  function updateAdBlockStats(stats) {
+    if (!stats) return;
+    
+    adblockStats = stats;
+    
+    // Update count in sidebar
+    if (adsBlockedCount) {
+      adsBlockedCount.textContent = stats.adsBlocked.toLocaleString();
+    }
+    
+    // Update stats in settings panel
+    if (settingsAdsBlocked) {
+      settingsAdsBlocked.textContent = stats.adsBlocked.toLocaleString();
+    }
+    
+    if (settingsTrackersBlocked) {
+      settingsTrackersBlocked.textContent = stats.trackersBlocked.toLocaleString();
+    }
+    
+    if (settingsDataSaved) {
+      const dataSavedMB = (stats.dataSaved / 1024).toFixed(1);
+      settingsDataSaved.textContent = dataSavedMB > 1 ? 
+        `${dataSavedMB} MB` : 
+        `${stats.dataSaved.toLocaleString()} KB`;
+    }
+  }
+  
+  // Theme handling
+  if (themeSwitch) {
+    const lightTheme = themeSwitch.querySelector('.light-theme');
+    const darkTheme = themeSwitch.querySelector('.dark-theme');
+    const systemTheme = themeSwitch.querySelector('.system-theme');
+    
+    if (lightTheme && darkTheme && systemTheme) {
+      // Set up initial state based on settings
+      const settings = window.browserAPI.getSettings();
+      const theme = settings.theme || 'system';
+      
+      if (theme === 'light') {
+        lightTheme.classList.add('active');
+      } else if (theme === 'dark') {
+        darkTheme.classList.add('active');
+      } else {
+        systemTheme.classList.add('active');
+      }
+      
+      // Add click handlers
+      [lightTheme, darkTheme, systemTheme].forEach(option => {
+        option.addEventListener('click', () => {
+          // Remove active class from all options
+          [lightTheme, darkTheme, systemTheme].forEach(opt => {
+            opt.classList.remove('active');
+          });
+          
+          // Add active class to clicked option
+          option.classList.add('active');
+          
+          // Set theme based on clicked option
+          let theme;
+          if (option === lightTheme) {
+            theme = 'light';
+            isDarkMode = false;
+          } else if (option === darkTheme) {
+            theme = 'dark';
+            isDarkMode = true;
+          } else {
+            theme = 'system';
+            // Check system preference
+            isDarkMode = window.matchMedia && 
+                         window.matchMedia('(prefers-color-scheme: dark)').matches;
+          }
+          
+          // Apply theme
+          document.body.classList.toggle('dark-theme', isDarkMode);
+          
+          // Save setting
+          window.browserAPI.saveSetting('theme', theme);
+          
+          // Show notification
+          showNotification(`Theme set to ${theme}`);
+        });
+      });
+    }
   }
 
   // Show a notification

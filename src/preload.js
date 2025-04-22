@@ -36,13 +36,30 @@ contextBridge.exposeInMainWorld('browserAPI', {
   resetSettings: () => ipcRenderer.invoke('reset-settings'),
   
   // Event listeners
-  onTabCreated: (callback) => ipcRenderer.on('tab-created', callback),
-  onTabClosed: (callback) => ipcRenderer.on('tab-closed', callback),
-  onTabActivated: (callback) => ipcRenderer.on('tab-activated', callback),
-  onTabUpdated: (callback) => ipcRenderer.on('tab-updated', callback),
-  onSidebarToggled: (callback) => ipcRenderer.on('sidebar-toggled', callback),
-  onBookmarksBarToggled: (callback) => ipcRenderer.on('bookmarks-bar-toggled', callback),
-  onUIVisibilityChanged: (callback) => ipcRenderer.on('ui-visibility-changed', callback),
+  onAdBlockStatsUpdated: (callback) => {
+    ipcRenderer.on('adblock-stats-updated', (event, stats) => callback(stats));
+  },
+  onTabCreated: (callback) => {
+    ipcRenderer.on('tab-created', (event, tab) => callback(tab));
+  },
+  onTabClosed: (callback) => {
+    ipcRenderer.on('tab-closed', (event, tabId) => callback(tabId));
+  },
+  onTabUpdated: (callback) => {
+    ipcRenderer.on('tab-updated', (event, tab) => callback(tab));
+  },
+  onTabActivated: (callback) => {
+    ipcRenderer.on('tab-activated', (event, tabId) => callback(tabId));
+  },
+  onSidebarToggled: (callback) => {
+    ipcRenderer.on('sidebar-toggled', (event, data) => callback(data));
+  },
+  onBookmarksBarToggled: (callback) => {
+    ipcRenderer.on('bookmarks-bar-toggled', (event, data) => callback(data));
+  },
+  onUIVisibilityChanged: (callback) => {
+    ipcRenderer.on('ui-visibility-changed', (event, data) => callback(data));
+  },
   onShowNotification: (callback) => ipcRenderer.on('show-notification', callback),
   
   // Remove event listeners
