@@ -100,6 +100,15 @@ document.addEventListener('DOMContentLoaded', () => {
       window.browserAPI.createTab(settings.defaultURL);
     });
     
+    // Home button
+    homeBtn.addEventListener('click', () => {
+      if (activeTabId) {
+        window.browserAPI.navigateTo(activeTabId, 'homepage');
+      } else {
+        window.browserAPI.createTab('homepage');
+      }
+    });
+    
     // Back button
     backBtn.addEventListener('click', () => {
       if (activeTabId) {
@@ -130,14 +139,39 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
     
-    // Copy URL button (also adds hotkey Ctrl+Shift+C or Cmd+Shift+C)
+    // URL input focus animation
+    urlInput.addEventListener('focus', () => {
+      const zenAddressBar = document.querySelector('.zen-address-bar');
+      if (zenAddressBar) {
+        zenAddressBar.classList.add('focused');
+      }
+    });
+    
+    urlInput.addEventListener('blur', () => {
+      const zenAddressBar = document.querySelector('.zen-address-bar');
+      if (zenAddressBar) {
+        zenAddressBar.classList.remove('focused');
+      }
+    });
+    
+    // Copy URL button
     copyUrlBtn.addEventListener('click', () => {
       copyCurrentUrl();
+    });
+    
+    // Bookmark button
+    bookmarkBtn.addEventListener('click', () => {
+      addCurrentPageToBookmarks();
     });
     
     // Toggle UI visibility button
     toggleUiBtn.addEventListener('click', () => {
       window.browserAPI.toggleHideUI();
+    });
+    
+    // History button
+    historyBtn.addEventListener('click', () => {
+      openHistory();
     });
     
     // Settings button
@@ -148,6 +182,16 @@ document.addEventListener('DOMContentLoaded', () => {
     // Close settings button
     closeSettingsBtn.addEventListener('click', () => {
       closeSettings();
+    });
+    
+    // Close history button
+    closeHistoryBtn.addEventListener('click', () => {
+      closeHistory();
+    });
+    
+    // Clear history button
+    clearHistoryBtn.addEventListener('click', () => {
+      clearHistory();
     });
     
     // Settings inputs
@@ -162,6 +206,11 @@ document.addEventListener('DOMContentLoaded', () => {
     
     alwaysShowTabsCheckbox.addEventListener('change', () => {
       window.browserAPI.updateSetting('showVerticalTabs', alwaysShowTabsCheckbox.checked);
+    });
+    
+    // Toggle bookmarks bar
+    document.getElementById('bookmarks-bar-toggle').addEventListener('change', () => {
+      window.browserAPI.toggleBookmarksBar();
     });
   }
 
