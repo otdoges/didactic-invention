@@ -12,15 +12,45 @@ if (require('electron-squirrel-startup')) {
   app.quit();
 }
 
-// Initialize store for settings
+// Initialize stores for settings, history, and bookmarks
 const store = new Store({
+  name: 'settings',
   defaults: {
     hideUI: false,
-    defaultURL: 'https://www.google.com',
+    defaultURL: 'homepage',  // Changed to use our custom homepage
     enableAdBlocker: true,
     showVerticalTabs: true,
     windowBounds: { width: 1200, height: 800 },
-    sidebarVisible: true
+    sidebarVisible: true,
+    showBookmarksBar: true,
+    theme: 'light',
+    searchEngine: 'google',
+    lastVisit: null,
+    pinnedTabs: []
+  }
+});
+
+// History store
+const historyStore = new Store({
+  name: 'history',
+  defaults: {
+    visits: []
+  }
+});
+
+// Bookmarks store
+const bookmarksStore = new Store({
+  name: 'bookmarks',
+  defaults: {
+    bookmarks: [
+      { id: 'github', title: 'GitHub', url: 'https://github.com', icon: null },
+      { id: 'youtube', title: 'YouTube', url: 'https://youtube.com', icon: null },
+      { id: 'twitter', title: 'Twitter', url: 'https://twitter.com', icon: null },
+      { id: 'reddit', title: 'Reddit', url: 'https://reddit.com', icon: null }
+    ],
+    folders: [
+      { id: 'root', title: 'Bookmarks Bar', items: ['github', 'youtube', 'twitter', 'reddit'] }
+    ]
   }
 });
 
