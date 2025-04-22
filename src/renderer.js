@@ -473,27 +473,30 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-          case 'bing':
-            searchEngine = 'https://www.bing.com/search?q=';
-            break;
-          case 'duckduckgo':
-            searchEngine = 'https://duckduckgo.com/?q=';
-            break;
-          case 'yahoo':
-            searchEngine = 'https://search.yahoo.com/search?p=';
-            break;
-          default:
-            searchEngine = 'https://www.google.com/search?q=';
-        }
-      }
-      
-      return searchEngine;
+  // Map of search engine base URLs
+  const SEARCH_ENGINES = {
+    bing: 'https://www.bing.com/search',
+    duckduckgo: 'https://duckduckgo.com/',
+    yahoo: 'https://search.yahoo.com/search',
+    google: 'https://www.google.com/search',
+  };
+  
+  // Get search engine URL based on settings and query
+  function getSearchEngineUrl(query) {
+    try {
+      const settings = window.browserAPI.getSettings();
+      const key = settings?.searchEngine ?? 'google';
+      const base = SEARCH_ENGINES[key] ?? SEARCH_ENGINES.google;
+      const url = new URL(base);
+      url.searchParams.set('q', query);
+      return url.toString();
+    } catch (error) {
+      console.error('Error getting search engine:', error);
+      return new URL(`${SEARCH_ENGINES.google}?q=${query}`).toString();
     }
-
-    // ...
   }
 
-  // ...
+    // ...
 
   // Media handling functions
   function checkForMediaContent(webview) {
