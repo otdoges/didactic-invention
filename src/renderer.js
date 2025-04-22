@@ -383,673 +383,242 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Tab closed event
     window.browserAPI.onTabClosed((event, data) => {
-      }
-    }
-    
-    return searchEngine;
-  }
-
-  // Toggle settings panel
-  function toggleSettings() {
-    settingsVisible = !settingsVisible;
-    if (settingsPanel) {
-      if (settingsVisible) {
-        settingsPanel.classList.remove('hidden');
-        settingsPanel.classList.add('visible');
-      } else {
-        settingsPanel.classList.add('hidden');
-        settingsPanel.classList.remove('visible');
-      }
-    }
-  }
-  
-  // Toggle history panel
-  function toggleHistory() {
-    historyVisible = !historyVisible;
-    if (historyPanel) {
-      if (historyVisible) {
-        historyPanel.classList.remove('hidden');
-        historyPanel.classList.add('visible');
-      } else {
-        historyPanel.classList.add('hidden');
-        historyPanel.classList.remove('visible');
-      }
-    }
-  }
-  
-  // Start loading indicators
-  function startLoading(tabId) {
-    const tabItem = document.querySelector(`.tab-item[data-tab-id="${tabId}"]`);
-    const reloadBtn = document.getElementById('reload-btn');
-    
-    if (tabItem) {
-      tabItem.classList.add('loading');
-    }
-    
-    if (reloadBtn) {
-      reloadBtn.classList.add('loading');
-      reloadBtn.querySelector('span').textContent = 'sync';
-    }
-    
-    // Show loading bar
-    if (loadingBar) {
-      loadingBar.classList.add('loading');
-    }
-    
-    // Clear any existing loading timer for this tab
-    if (loadingTimers[tabId]) {
-      clearTimeout(loadingTimers[tabId]);
-    }
-    
-    // Set a timeout to hide loading indicators if loading takes too long
-    loadingTimers[tabId] = setTimeout(() => {
-      stopLoading(tabId);
-    }, 10000); // 10 seconds timeout
-  }
-  
-  // Stop loading indicators
-  function stopLoading(tabId) {
-    const tabItem = document.querySelector(`.tab-item[data-tab-id="${tabId}"]`);
-    const reloadBtn = document.getElementById('reload-btn');
-    
-    if (tabItem) {
-      tabItem.classList.remove('loading');
-    }
-    
-    if (reloadBtn) {
-      reloadBtn.classList.remove('loading');
-      reloadBtn.querySelector('span').textContent = 'refresh';
-    }
-    
-    // Hide loading bar
-    if (loadingBar) {
-      loadingBar.classList.remove('loading');
-    }
-    
-    // Clear the loading timer for this tab
-    if (loadingTimers[tabId]) {
-      clearTimeout(loadingTimers[tabId]);
-      delete loadingTimers[tabId];
-    }
-  }
-  
-  // Show error page
-  function showErrorPage(webview, errorMessage) {
-    const errorHTML = `
-      <html>
-        <head>
-          <title>Page load failed</title>
-          <style>
-            body {
-              font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-              color: #333;
-              text-align: center;
-              padding: 50px 20px;
-              background-color: #f7f7f7;
-            }
-            .error-container {
-              max-width: 500px;
-              margin: 0 auto;
-              background-color: white;
-              border-radius: 8px;
-              padding: 30px;
-              box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            }
-            .error-icon {
-              font-size: 64px;
-              color: #f44336;
-              margin-bottom: 20px;
-            }
-            h1 {
-              font-size: 24px;
-              margin-bottom: 10px;
-            }
-            p {
-              font-size: 16px;
-              color: #666;
-              margin-bottom: 20px;
-            }
-            button {
-              background-color: #60a5fa;
-              color: white;
-              border: none;
-              padding: 10px 20px;
-              border-radius: 4px;
-              font-size: 14px;
-              cursor: pointer;
-              transition: background-color 0.2s;
-            }
-            button:hover {
-              background-color: #3b82f6;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="error-container">
-            <div class="error-icon">⚠️</div>
-            <h1>Page failed to load</h1>
-            <p>${errorMessage || 'The requested page could not be loaded. Please check your connection and try again.'}</p>
-            <button onclick="window.location.reload()">Try Again</button>
-          </div>
-        </body>
-      </html>
-    `;
-    
-    webview.src = `data:text/html,${encodeURIComponent(errorHTML)}`;
-  }
-
-  // UI visibility changed event
-  window.browserAPI.onUIVisibilityChanged((event, data) => {
-    if (data.hidden) {
-      sidebar.classList.add('hidden');
-      navbar.classList.add('hidden');
-      bookmarksBar.classList.add('hidden');
-      mainContent.style.marginLeft = '0';
-    } else {
-      if (settings.sidebarVisible) {
-        sidebar.classList.remove('hidden');
-        mainContent.style.marginLeft = '80px';
-      }
-      navbar.classList.remove('hidden');
-      if (settings.showBookmarksBar) {
-        bookmarksBar.classList.remove('hidden');
-      }
-        mainContent.style.marginLeft = '0';
-      } else {
-        if (settings.sidebarVisible) {
-          sidebar.classList.remove('hidden');
-          mainContent.style.marginLeft = '80px';
-        }
-        navbar.classList.remove('hidden');
-        if (settings.showBookmarksBar) {
-          bookmarksBar.classList.remove('hidden');
-        }
-      }
-      animateContent();
+      // Update local tabs array
+      refreshTabs();
     });
 
-    // Show notification event
-    window.browserAPI.onShowNotification((event, data) => {
-      showNotification(data.message);
-    });
-  }
-
-  // Animate content when UI elements show/hide
-  function animateContent() {
-    mainContent.style.transition = 'margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
-    setTimeout(() => {
-      mainContent.style.transition = '';
-    }, 300);
-  }
-
-  // Refresh tabs list from main process
-  function refreshTabs() {
-    tabs = window.browserAPI.getTabs();
-    renderTabs();
-  }
-
-  // Render the tabs in the sidebar
-  function renderTabs() {
-    // Clear current tabs
-    tabsContainer.innerHTML = '';
-
-    // Add each tab
-    tabs.forEach(tab => {
-      const tabElement = createTabElement(tab);
-      tabsContainer.appendChild(tabElement);
-    });
-
-    // Update active tab UI
-    updateActiveTab();
-  }
-
-  // Create a tab element for the sidebar
-  function createTabElement(tab) {
-    const tabElement = document.createElement('div');
-    tabElement.className = `tab-item ${tab.isActive ? 'active' : ''}`;
-    tabElement.setAttribute('data-tab-id', tab.id);
-
-    // Favicon
-    const favicon = document.createElement('img');
-    favicon.className = 'tab-favicon';
-    favicon.src = tab.favicon || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>';
-    favicon.onerror = () => {
-      favicon.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>';
-    };
-
-    // Title
-    const title = document.createElement('div');
-    title.className = 'tab-title';
-    title.textContent = tab.title || 'New Tab';
-
-    // Close button
-    const closeBtn = document.createElement('div');
-    closeBtn.className = 'tab-close';
-    closeBtn.innerHTML = '×';
-    closeBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      window.browserAPI.closeTab(tab.id);
-    });
-
-    // Click event to switch tabs
-    tabElement.addEventListener('click', () => {
-      window.browserAPI.switchTab(tab.id);
-    });
-
-    // Append elements
-    tabElement.appendChild(favicon);
-    tabElement.appendChild(title);
-    tabElement.appendChild(closeBtn);
-
-    return tabElement;
-  }
-
-  // Update a specific tab
-  function updateTab(tabData) {
-    const index = tabs.findIndex(tab => tab.id === tabData.id);
-    if (index !== -1) {
-      // Update our local data
-      tabs[index] = { ...tabs[index], ...tabData };
-
-      // Update the DOM if the tab exists
-      const tabElement = document.querySelector(`[data-tab-id="${tabData.id}"]`);
-      if (tabElement) {
-        // Update favicon if provided
-        if (tabData.favicon) {
-          const favicon = tabElement.querySelector('.tab-favicon');
-          favicon.src = tabData.favicon;
-        }
-
-        // Update title if provided
-        if (tabData.title) {
-          const title = tabElement.querySelector('.tab-title');
-          title.textContent = tabData.title;
-        }
-      }
-    }
-  }
-
-  // Update the active tab styling
-  function updateActiveTab() {
-    // Remove active class from all tabs
-    document.querySelectorAll('.tab-item').forEach(el => {
-      el.classList.remove('active');
-    });
-
-    // Add active class to current tab
-    const activeTab = document.querySelector(`[data-tab-id="${activeTabId}"]`);
-    if (activeTab) {
-      activeTab.classList.add('active');
-    }
-  }
-
-  // Update the URL bar with the current tab's URL
-  function updateUrlBar() {
-    const currentUrl = window.browserAPI.getCurrentUrl();
-    urlInput.value = currentUrl;
-  }
-
-  // Send a message to the active tab's webContents
-  function sendMessageToActiveTab(message, args) {
-    // This would need implementation in the main process
-    // For now, we handle some cases directly
-    if (message === 'history-go-back') {
-      // Handled by main process
-    } else if (message === 'history-go-forward') {
-      // Handled by main process
-    } else if (message === 'reload') {
-      // Handled by main process
-    }
-  }
-
-  // Copy the current URL to the clipboard
-  function copyCurrentUrl() {
-    const currentUrl = window.browserAPI.getCurrentUrl();
-    if (currentUrl) {
-      // The actual copying is done by the main process
-      // Just trigger our shortcut handler
-      showNotification('URL copied to clipboard');
-    }
-  }
-
-  // Update the site icon in the address bar
-  function updateSiteIcon(faviconUrl) {
-    if (faviconUrl) {
-      // Create an image element
-      const img = document.createElement('img');
-      img.src = faviconUrl;
-      img.style.width = '16px';
-      img.style.height = '16px';
-      siteIcon.innerHTML = '';
-      siteIcon.appendChild(img);
-    } else {
-      // Reset to default icon
-      siteIcon.innerHTML = '<span class="material-icons">public</span>';
-    }
-  }
-
-  // Add current page to bookmarks
-  async function addCurrentPageToBookmarks() {
-    const currentUrl = window.browserAPI.getCurrentUrl();
-    const currentTab = tabs.find(tab => tab.id === activeTabId);
-
-    if (!currentUrl || !currentTab) return;
-
-    // Check if already bookmarked
-    const isBookmarked = bookmarks.some(bookmark => bookmark.url === currentUrl);
-
-    if (isBookmarked) {
-      showNotification('This page is already bookmarked');
-      return;
-    }
-
-    const newBookmark = {
-      id: 'bookmark_' + Date.now(),
-      title: currentTab.title || 'Untitled',
-      url: currentUrl,
-      icon: currentTab.favicon,
-      dateAdded: new Date().toISOString()
-    };
-
-    try {
-      await window.browserAPI.addBookmark(newBookmark);
-      bookmarks.push(newBookmark);
-      renderBookmarksBar();
-      showNotification('Bookmark added');
+    // Tab activated event
+    window.browserAPI.onTabActivated((event, data) => {
+      activeTabId = data.id;
+      updateActiveTab();
+      updateUrlBar();
       updateBookmarkButtonState();
-
-      // Add visual feedback
-      bookmarkBtn.querySelector('.material-icons').textContent = 'bookmark';
-      setTimeout(() => {
-        // Animate the bookmark button
-        bookmarkBtn.classList.add('pulse-animation');
-        setTimeout(() => {
-          bookmarkBtn.classList.remove('pulse-animation');
-        }, 1000);
-      }, 100);
-    } catch (error) {
-      console.error('Failed to add bookmark:', error);
-      showNotification('Failed to add bookmark');
-    }
-  }
-
-  // Update bookmark button state based on current URL
-  function updateBookmarkButtonState() {
-    const currentUrl = window.browserAPI.getCurrentUrl();
-    const isBookmarked = bookmarks.some(bookmark => bookmark.url === currentUrl);
-
-    const icon = bookmarkBtn.querySelector('.material-icons');
-    if (isBookmarked) {
-      icon.textContent = 'bookmark';
-    } else {
-      icon.textContent = 'bookmark_border';
-    }
-  }
-
-  // Render bookmarks in the bookmarks bar
-  function renderBookmarksBar() {
-    // Clear current bookmarks
-    bookmarksBar.innerHTML = '';
-
-    // Add each bookmark
-    bookmarks.forEach(bookmark => {
-      const bookmarkElement = createBookmarkElement(bookmark);
-      bookmarksBar.appendChild(bookmarkElement);
     });
 
-    // Add the "add bookmark" button
-    const addButton = document.createElement('button');
-    addButton.className = 'add-bookmark';
-    addButton.title = 'Add bookmark';
-    addButton.innerHTML = '<span class="material-icons">add</span>';
-    addButton.addEventListener('click', () => {
-      addCurrentPageToBookmarks();
-    });
-
-    bookmarksBar.appendChild(addButton);
-  }
-
-  // Create a bookmark element for the bookmark bar
-  function createBookmarkElement(bookmark) {
-    const bookmarkElement = document.createElement('div');
-    bookmarkElement.className = 'bookmark-item';
-    bookmarkElement.setAttribute('data-bookmark-id', bookmark.id);
-    bookmarkElement.title = bookmark.title;
-
-    // Favicon
-    const favicon = document.createElement('img');
-    favicon.className = 'bookmark-icon';
-    favicon.src = bookmark.icon || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%236B7280" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>';
-    favicon.onerror = () => {
-      favicon.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%236B7280" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>';
-    };
-
-    // Title
-    const title = document.createElement('span');
-    title.className = 'bookmark-title';
-    title.textContent = bookmark.title;
-
-    // Click event to navigate
-    bookmarkElement.addEventListener('click', () => {
-      if (activeTabId) {
-        window.browserAPI.navigateTo(activeTabId, bookmark.url);
-      } else {
-        window.browserAPI.createTab(bookmark.url);
+    // Tab updated event
+    window.browserAPI.onTabUpdated((event, data) => {
+      updateTab(data);
+      if (data.id === activeTabId) {
+        if (data.url) {
+          updateUrlBar();
+          updateBookmarkButtonState();
+        }
+        if (data.favicon) {
+          currentFavicon = data.favicon;
+          updateSiteIcon(data.favicon);
+        }
       }
     });
 
-    // Right-click to delete
-    bookmarkElement.addEventListener('contextmenu', (e) => {
-      e.preventDefault();
-      if (confirm('Delete this bookmark?')) {
-        deleteBookmark(bookmark.id);
+    // Get search engine URL
+    function getSearchEngineUrl() {
+      const searchEngineSelect = document.getElementById('search-engine');
+      let searchEngine = 'https://www.google.com/search?q=';
+      
+      if (searchEngineSelect) {
+        const engine = searchEngineSelect.value;
+        switch (engine) {
+          case 'bing':
+            searchEngine = 'https://www.bing.com/search?q=';
+            break;
+          case 'duckduckgo':
+            searchEngine = 'https://duckduckgo.com/?q=';
+            break;
+          case 'yahoo':
+            searchEngine = 'https://search.yahoo.com/search?p=';
+            break;
+          default:
+            searchEngine = 'https://www.google.com/search?q=';
+        }
       }
-    });
-
-    // Append elements
-    bookmarkElement.appendChild(favicon);
-    bookmarkElement.appendChild(title);
-
-    return bookmarkElement;
-  }
-
-  // Delete a bookmark
-  async function deleteBookmark(bookmarkId) {
-    try {
-      await window.browserAPI.deleteBookmark(bookmarkId);
-      bookmarks = bookmarks.filter(b => b.id !== bookmarkId);
-      renderBookmarksBar();
-      showNotification('Bookmark deleted');
-      updateBookmarkButtonState();
-    } catch (error) {
-      console.error('Failed to delete bookmark:', error);
-      showNotification('Failed to delete bookmark');
+      
+      return searchEngine;
     }
+
+    // ...
   }
 
-  // Open history panel
-  async function openHistory() {
-    // Load history data
-    try {
-      history = await window.browserAPI.getHistory();
-      renderHistory();
-      historyPanel.classList.add('visible');
-    } catch (error) {
-      console.error('Failed to load history:', error);
-      showNotification('Failed to load history');
-    }
-  }
+  // ...
 
-  // Close history panel
-  function closeHistory() {
-    historyPanel.classList.remove('visible');
-  }
-
-  // Clear history
-  async function clearHistory() {
-    if (confirm('Are you sure you want to clear all browsing history?')) {
-      try {
-        await window.browserAPI.clearHistory();
-        history = [];
-        renderHistory();
-        showNotification('History cleared');
-      } catch (error) {
-        console.error('Failed to clear history:', error);
-        showNotification('Failed to clear history');
+  // Media handling functions
+  function checkForMediaContent(webview) {
+    if (!webview) return;
+    
+    webview.executeJavaScript(`
+      (function() {
+        const videos = document.querySelectorAll('video');
+        const audios = document.querySelectorAll('audio');
+        return {
+          videos: videos.length,
+          audios: audios.length
+        };
+      })()
+    `).then(result => {
+      if (result.videos > 0 || result.audios > 0) {
+        if (!document.querySelector('.media-player')) {
+          createMediaPlayer(webview, result.videos > 0 ? 'video' : 'audio');
+        }
       }
-    }
+    }).catch(err => console.error('Error checking for media:', err));
   }
-
-  // Render history items
-  function renderHistory() {
-    // Clear current history items
-    historyItemsContainer.innerHTML = '';
-
-    if (history.length === 0) {
-      const emptyMessage = document.createElement('div');
-      emptyMessage.className = 'empty-history';
-      emptyMessage.textContent = 'No browsing history';
-      historyItemsContainer.appendChild(emptyMessage);
-      return;
-    }
-
-    // Group by date
-    const groupedHistory = groupHistoryByDate(history);
-
-    // Add each group
-    Object.keys(groupedHistory).forEach(date => {
-      // Add date header
-      const dateHeader = document.createElement('div');
-      dateHeader.className = 'history-date-header';
-      dateHeader.textContent = date;
-      historyItemsContainer.appendChild(dateHeader);
-
-      // Add items for this date
-      groupedHistory[date].forEach(item => {
-        const historyElement = createHistoryElement(item);
-        historyItemsContainer.appendChild(historyElement);
+  
+  function createMediaPlayer(webview, type) {
+    // Clone the template
+    if (!mediaPlayerTemplate) return;
+    
+    const mediaPlayerNode = mediaPlayerTemplate.content.cloneNode(true);
+    const mediaPlayer = mediaPlayerNode.querySelector('.media-player');
+    const mediaContent = mediaPlayer.querySelector('.media-content');
+    
+    // Add class based on media type
+    mediaPlayer.classList.add(type === 'video' ? 'video-player' : 'audio-player');
+    
+    // Set up media content based on type
+    if (type === 'video') {
+      webview.executeJavaScript(`
+        (function() {
+          const video = document.querySelector('video');
+          if (video) {
+            return {
+              src: video.src || video.currentSrc,
+              poster: video.poster,
+              title: document.title
+            };
+          }
+          return null;
+        })()
+      `).then(videoData => {
+        if (videoData) {
+          // Create video element
+          const videoEl = document.createElement('video');
+          videoEl.src = videoData.src;
+          videoEl.controls = false;
+          videoEl.poster = videoData.poster;
+          mediaContent.appendChild(videoEl);
+          
+          // Update title
+          const titleEl = mediaPlayer.querySelector('.media-player-title');
+          titleEl.textContent = videoData.title || 'Video Player';
+          
+          // Set up controls
+          setupMediaControls(mediaPlayer, videoEl);
+        }
       });
+    } else {
+      webview.executeJavaScript(`
+        (function() {
+          const audio = document.querySelector('audio');
+          if (audio) {
+            return {
+              src: audio.src || audio.currentSrc,
+              title: document.title
+            };
+          }
+          return null;
+        })()
+      `).then(audioData => {
+        if (audioData) {
+          // Create audio placeholder icon
+          const audioIcon = document.createElement('div');
+          audioIcon.className = 'media-icon';
+          audioIcon.innerHTML = '<span class="material-icons">music_note</span>';
+          mediaContent.appendChild(audioIcon);
+          
+          // Create audio element
+          const audioEl = document.createElement('audio');
+          audioEl.src = audioData.src;
+          audioEl.controls = false;
+          mediaContent.appendChild(audioEl);
+          
+          // Update title
+          const titleEl = mediaPlayer.querySelector('.media-player-title');
+          titleEl.textContent = audioData.title || 'Audio Player';
+          
+          // Set up controls
+          setupMediaControls(mediaPlayer, audioEl);
+        }
+      });
+    }
+    
+    // Add to document and store reference
+    document.body.appendChild(mediaPlayer);
+    mediaPlayers.push(mediaPlayer);
+    
+    // Set up close button
+    const closeBtn = mediaPlayer.querySelector('.media-close-btn');
+    closeBtn.addEventListener('click', () => {
+      mediaPlayer.remove();
+      mediaPlayers = mediaPlayers.filter(player => player !== mediaPlayer);
     });
+    
+    return mediaPlayer;
   }
-
-  // Group history items by date
-  function groupHistoryByDate(historyItems) {
-    const grouped = {};
-
-    historyItems.forEach(item => {
-      const date = new Date(item.timestamp);
-      const dateString = date.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-
-      if (!grouped[dateString]) {
-        grouped[dateString] = [];
-      }
-
-      grouped[dateString].push(item);
-    });
-
-    return grouped;
-  }
-
-  // Create a history item element
-  function createHistoryElement(historyItem) {
-    const element = document.createElement('div');
-    element.className = 'history-item';
-    element.setAttribute('data-history-id', historyItem.id);
-
-    // Favicon
-    const favicon = document.createElement('img');
-    favicon.className = 'history-favicon';
-    favicon.src = historyItem.favicon || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%236B7280" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>';
-    favicon.onerror = () => {
-      favicon.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%236B7280" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>';
-    };
-
-    // Details container
-    const details = document.createElement('div');
-    details.className = 'history-details';
-
-    // Title
-    const title = document.createElement('div');
-    title.className = 'history-title';
-    title.textContent = historyItem.title;
-
-    // URL
-    const url = document.createElement('div');
-    url.className = 'history-url';
-    url.textContent = historyItem.url;
-
-    details.appendChild(title);
-    details.appendChild(url);
-
-    // Time
-    const time = document.createElement('div');
-    time.className = 'history-time';
-    time.textContent = new Date(historyItem.timestamp).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
-
-    // Delete button
-    const deleteBtn = document.createElement('button');
-    deleteBtn.className = 'history-delete';
-    deleteBtn.innerHTML = '<span class="material-icons">close</span>';
-    deleteBtn.title = 'Remove from history';
-    deleteBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      deleteHistoryItem(historyItem.id);
-    });
-
-    // Click to navigate
-    element.addEventListener('click', () => {
-      if (activeTabId) {
-        window.browserAPI.navigateTo(activeTabId, historyItem.url);
+  
+  function setupMediaControls(mediaPlayer, mediaElement) {
+    const playBtn = mediaPlayer.querySelector('.media-play');
+    const progressBar = mediaPlayer.querySelector('.media-progress');
+    const progressFill = mediaPlayer.querySelector('.media-progress-fill');
+    const timeDisplay = mediaPlayer.querySelector('.media-time');
+    const fullscreenBtn = mediaPlayer.querySelector('.media-fullscreen');
+    
+    // Play/pause button
+    playBtn.addEventListener('click', () => {
+      if (mediaElement.paused) {
+        mediaElement.play();
+        playBtn.querySelector('span').textContent = 'pause';
       } else {
-        window.browserAPI.createTab(historyItem.url);
+        mediaElement.pause();
+        playBtn.querySelector('span').textContent = 'play_arrow';
       }
-      closeHistory();
     });
-
-    // Append all elements
-    element.appendChild(favicon);
-    element.appendChild(details);
-    element.appendChild(time);
-    element.appendChild(deleteBtn);
-
-    return element;
-  }
-
-  // Delete a history item
-  async function deleteHistoryItem(id) {
-    try {
-      await window.browserAPI.deleteHistoryItem(id);
-      history = history.filter(item => item.id !== id);
-      renderHistory();
-      showNotification('History item removed');
-    } catch (error) {
-      console.error('Failed to delete history item:', error);
-      showNotification('Failed to delete history item');
+    
+    // Update progress bar
+    mediaElement.addEventListener('timeupdate', () => {
+      const percent = (mediaElement.currentTime / mediaElement.duration) * 100;
+      progressFill.style.width = `${percent}%`;
+      
+      // Update time display
+      const currentTime = formatTime(mediaElement.currentTime);
+      const duration = formatTime(mediaElement.duration);
+      timeDisplay.textContent = `${currentTime} / ${duration}`;
+    });
+    
+    // Click on progress bar to seek
+    progressBar.addEventListener('click', (e) => {
+      const rect = progressBar.getBoundingClientRect();
+      const pos = (e.clientX - rect.left) / rect.width;
+      mediaElement.currentTime = pos * mediaElement.duration;
+    });
+    
+    // Fullscreen button (only for video)
+    if (mediaPlayer.classList.contains('video-player') && fullscreenBtn) {
+      fullscreenBtn.addEventListener('click', () => {
+        if (mediaPlayer.classList.contains('fullscreen')) {
+          mediaPlayer.classList.remove('fullscreen');
+          fullscreenBtn.querySelector('span').textContent = 'fullscreen';
+        } else {
+          mediaPlayer.classList.add('fullscreen');
+          fullscreenBtn.querySelector('span').textContent = 'fullscreen_exit';
+        }
+      });
+    } else if (fullscreenBtn) {
+      // Hide fullscreen button for audio
+      fullscreenBtn.style.display = 'none';
     }
   }
-
-  // Open settings panel
-  function openSettings() {
-    settingsPanel.classList.remove('hidden');
-    setTimeout(() => {
-      settingsPanel.classList.add('visible');
-    }, 10);
-
-    // Load current settings values
-    defaultUrlInput.value = settings.defaultURL || '';
-    toggleAdBlockerCheckbox.checked = settings.enableAdBlocker || false;
-    alwaysShowTabsCheckbox.checked = settings.showVerticalTabs || false;
+  
+  // Format time in MM:SS format
+  function formatTime(seconds) {
+    if (isNaN(seconds)) return '00:00';
+    
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   }
 
-  // Close settings panel
-  function closeSettings() {
-    settingsPanel.classList.remove('visible');
-    setTimeout(() => {
-      settingsPanel.classList.add('hidden');
-    }, 300);
-  }
+  // ...
 
-  // Update UI based on settings
+  // Update UI from settings
   function updateUIFromSettings() {
     // Update sidebar visibility
     if (!settings.sidebarVisible) {
@@ -1062,6 +631,54 @@ document.addEventListener('DOMContentLoaded', () => {
       sidebar.classList.add('hidden');
       navbar.classList.add('hidden');
     }
+  }
+
+  // Update settings
+  async function updateSettings() {
+    const settings = {
+      adBlocker: toggleAdBlocker && toggleAdBlocker.checked,
+      defaultUrl: defaultUrl && defaultUrl.value || 'homepage',
+      alwaysShowTabs: alwaysShowTabs && alwaysShowTabs.checked,
+      darkMode: isDarkMode,
+      showBookmarkBar: bookmarkBarToggle && bookmarkBarToggle.checked
+    };
+    
+    // Update bookmark bar visibility
+    const bookmarkBar = document.getElementById('bookmark-bar');
+    if (bookmarkBar) {
+      if (settings.showBookmarkBar) {
+        bookmarkBar.classList.remove('hidden');
+      } else {
+        bookmarkBar.classList.add('hidden');
+      }
+    }
+    
+    await window.browserAPI.saveSettings(settings);
+    showNotification('Settings updated', 'success');
+  }
+
+  // Toggle dark mode
+  function toggleDarkMode() {
+    isDarkMode = !isDarkMode;
+    applyTheme();
+    
+    // Update theme switch appearance
+    if (themeSwitch) {
+      themeSwitch.classList.toggle('dark', isDarkMode);
+    }
+    
+    // Save the setting
+    updateSettings();
+  }
+
+  // Apply theme based on dark mode setting
+  function applyTheme() {
+    document.body.classList.toggle('dark-theme', isDarkMode);
+    
+    // Update webviews with appropriate theme
+    document.querySelectorAll('webview').forEach(webview => {
+      webview.send('theme-changed', { isDarkMode });
+    });
   }
 
   // Show a notification
