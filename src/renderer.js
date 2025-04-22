@@ -233,13 +233,21 @@ document.addEventListener('DOMContentLoaded', () => {
       activeTabId = data.id;
       updateActiveTab();
       updateUrlBar();
+      updateBookmarkButtonState();
     });
     
     // Tab updated event
     window.browserAPI.onTabUpdated((event, data) => {
       updateTab(data);
-      if (data.id === activeTabId && data.url) {
-        updateUrlBar();
+      if (data.id === activeTabId) {
+        if (data.url) {
+          updateUrlBar();
+          updateBookmarkButtonState();
+        }
+        if (data.favicon) {
+          currentFavicon = data.favicon;
+          updateSiteIcon(data.favicon);
+        }
       }
     });
     
@@ -247,11 +255,22 @@ document.addEventListener('DOMContentLoaded', () => {
     window.browserAPI.onSidebarToggled((event, data) => {
       if (data.visible) {
         sidebar.classList.remove('hidden');
-        navbar.classList.remove('sidebar-hidden');
+        mainContent.style.marginLeft = '80px';
       } else {
         sidebar.classList.add('hidden');
-        navbar.classList.add('sidebar-hidden');
+        mainContent.style.marginLeft = '0';
       }
+      animateContent();
+    });
+    
+    // Bookmarks bar toggled event
+    window.browserAPI.onBookmarksBarToggled((event, data) => {
+      if (data.visible) {
+        bookmarksBar.classList.remove('hidden');
+      } else {
+        bookmarksBar.classList.add('hidden');
+      }
+      animateContent();
     });
     
     // UI visibility changed event
@@ -259,16 +278,33 @@ document.addEventListener('DOMContentLoaded', () => {
       if (data.hidden) {
         sidebar.classList.add('hidden');
         navbar.classList.add('hidden');
+        bookmarksBar.classList.add('hidden');
+        mainContent.style.marginLeft = '0';
       } else {
-        sidebar.classList.remove('hidden');
+        if (settings.sidebarVisible) {
+          sidebar.classList.remove('hidden');
+          mainContent.style.marginLeft = '80px';
+        }
         navbar.classList.remove('hidden');
+        if (settings.showBookmarksBar) {
+          bookmarksBar.classList.remove('hidden');
+        }
       }
+      animateContent();
     });
     
     // Show notification event
     window.browserAPI.onShowNotification((event, data) => {
       showNotification(data.message);
     });
+  }
+  
+  // Animate content when UI elements show/hide
+  function animateContent() {
+    mainContent.style.transition = 'margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+    setTimeout(() => {
+      mainContent.style.transition = '';
+    }, 300);
   }
 
   // Refresh tabs list from main process
