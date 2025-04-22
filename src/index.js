@@ -66,9 +66,13 @@ class TabManager {
     this.tabs = [];
     this.activeTabIndex = -1;
     this.sidebarVisible = store.get('sidebarVisible');
+    this.showBookmarksBar = store.get('showBookmarksBar');
     
     // Setup IPC handlers for tab operations
     this.setupIPCHandlers();
+    
+    // Load pinned tabs if any
+    this.pinnedTabs = store.get('pinnedTabs') || [];
   }
 
   setupIPCHandlers() {
@@ -95,6 +99,10 @@ class TabManager {
     ipcMain.on('toggle-hide-ui', () => {
       this.toggleHideUI();
     });
+    
+    ipcMain.on('toggle-bookmarks-bar', () => {
+      this.toggleBookmarksBar();
+    });
 
     ipcMain.on('get-current-url', (event) => {
       if (this.activeTabIndex >= 0 && this.tabs[this.activeTabIndex]) {
@@ -110,9 +118,88 @@ class TabManager {
         title: tab.title || 'New Tab',
         url: tab.url,
         isActive: index === this.activeTabIndex,
-        favicon: tab.favicon || null
+        favicon: tab.favicon || null,
+        isPinned: this.pinnedTabs.includes(tab.id)
       }));
       event.returnValue = tabsInfo;
+    });
+    
+    // History handlers
+    ipcMain.handle('get-history', async () => {
+      return historyStore.get('visits');
+    });
+    
+    ipcMain.handle('clear-history', async () => {
+      historyStore.set('visits', []);
+      return true;
+    });
+    
+    ipcMain.handle('delete-history-item', async (event, id) => {
+      const visits = historyStore.get('visits');
+      const filteredVisits = visits.filter(visit => visit.id !== id);
+      historyStore.set('visits', filteredVisits);
+      return true;
+    });
+    
+    // Bookmark handlers
+    ipcMain.handle('get-bookmarks', async () => {
+      return {
+        bookmarks: bookmarksStore.get('bookmarks'),
+        folders: bookmarksStore.get('folders')
+      };
+    });
+    
+    ipcMain.handle('add-bookmark', async (event, bookmark) => {
+      const bookmarks = bookmarksStore.get('bookmarks');
+      const folders = bookmarksStore.get('folders');
+      
+      // Add to bookmarks array
+      bookmarks.push(bookmark);
+      
+      // Add to root folder by default
+      const rootFolder = folders.find(f => f.id === 'root');
+      if (rootFolder) {
+        rootFolder.items.push(bookmark.id);
+      }
+      
+      bookmarksStore.set('bookmarks', bookmarks);
+      bookmarksStore.set('folders', folders);
+      
+      return true;
+    });
+    
+    ipcMain.handle('delete-bookmark', async (event, bookmarkId) => {
+      let bookmarks = bookmarksStore.get('bookmarks');
+      let folders = bookmarksStore.get('folders');
+      
+      // Remove from bookmarks array
+      bookmarks = bookmarks.filter(b => b.id !== bookmarkId);
+      
+      // Remove from all folders
+      folders = folders.map(folder => {
+        folder.items = folder.items.filter(id => id !== bookmarkId);
+        return folder;
+      });
+      
+      bookmarksStore.set('bookmarks', bookmarks);
+      bookmarksStore.set('folders', folders);
+      
+      return true;
+    });
+    
+    // Pin/unpin tab handlers
+    ipcMain.handle('pin-tab', async (event, tabId) => {
+      if (!this.pinnedTabs.includes(tabId)) {
+        this.pinnedTabs.push(tabId);
+        store.set('pinnedTabs', this.pinnedTabs);
+      }
+      return true;
+    });
+    
+    ipcMain.handle('unpin-tab', async (event, tabId) => {
+      this.pinnedTabs = this.pinnedTabs.filter(id => id !== tabId);
+      store.set('pinnedTabs', this.pinnedTabs);
+      return true;
     });
   }
 
@@ -139,7 +226,8 @@ class TabManager {
       view,
       url,
       title: 'New Tab',
-      favicon: null
+      favicon: null,
+      isHomepage: url === 'homepage'
     };
     
     this.tabs.push(newTab);
@@ -160,18 +248,34 @@ class TabManager {
       }
     });
 
-    view.webContents.on('did-navigate', (event, url) => {
-      newTab.url = url;
-      this.mainWindow.webContents.send('tab-updated', { id, url });
+    view.webContents.on('did-navigate', (event, navigatedUrl) => {
+      newTab.url = navigatedUrl;
+      newTab.isHomepage = false; // No longer homepage after navigation
+      this.mainWindow.webContents.send('tab-updated', { id, url: navigatedUrl });
+      
+      // Add to history
+      this.addToHistory(navigatedUrl, newTab.title, newTab.favicon);
     });
 
-    view.webContents.on('did-navigate-in-page', (event, url) => {
-      newTab.url = url;
-      this.mainWindow.webContents.send('tab-updated', { id, url });
+    view.webContents.on('did-navigate-in-page', (event, navigatedUrl) => {
+      newTab.url = navigatedUrl;
+      this.mainWindow.webContents.send('tab-updated', { id, url: navigatedUrl });
     });
     
-    // Load the URL
-    view.webContents.loadURL(url);
+    // Handle external links
+    view.webContents.setWindowOpenHandler(({ url }) => {
+      this.createTab(url);
+      return { action: 'deny' };
+    });
+    
+    // Load the URL - special handling for homepage
+    if (url === 'homepage') {
+      view.webContents.loadFile(path.join(__dirname, 'homepage.html'));
+    } else {
+      view.webContents.loadURL(url);
+      // Only add to history for non-homepage loads
+      this.addToHistory(url, 'New Tab');
+    }
     
     // Set as active tab
     this.activateTab(id);
@@ -267,15 +371,20 @@ class TabManager {
     const [width, height] = this.mainWindow.getContentSize();
     const hideUI = store.get('hideUI', false);
     
-    // Define sidebar width
+    // Define sidebar width and heights for UI elements
     const sidebarWidth = this.sidebarVisible && !hideUI ? 80 : 0;
+    const navbarHeight = !hideUI ? 60 : 0;
+    const bookmarksBarHeight = this.showBookmarksBar && !hideUI ? 40 : 0;
     
-    // Calculate content area (adjusting for sidebar if visible)
+    // Calculate y-position based on visible UI elements
+    const yPosition = navbarHeight + bookmarksBarHeight;
+    
+    // Calculate content area (adjusting for sidebar and other UI elements if visible)
     view.setBounds({
       x: sidebarWidth,
-      y: 0,
+      y: yPosition,
       width: width - sidebarWidth,
-      height: height
+      height: height - yPosition
     });
   }
 
@@ -294,6 +403,49 @@ class TabManager {
     
     // Notify renderer to update UI
     this.mainWindow.webContents.send('sidebar-toggled', { visible: this.sidebarVisible });
+  }
+  
+  toggleBookmarksBar() {
+    this.showBookmarksBar = !this.showBookmarksBar;
+    store.set('showBookmarksBar', this.showBookmarksBar);
+    
+    // Update view bounds to account for bookmarks bar toggle
+    this.updateAllViewBounds();
+    
+    // Notify renderer to update UI
+    this.mainWindow.webContents.send('bookmarks-bar-toggled', { visible: this.showBookmarksBar });
+  }
+  
+  // Add to history
+  addToHistory(url, title, favicon = null) {
+    // Don't track local files or special URLs
+    if (url.startsWith('file://') || url === 'about:blank') {
+      return;
+    }
+    
+    // Get current history
+    const visits = historyStore.get('visits');
+    
+    // Create a new history entry
+    const historyItem = {
+      id: Date.now(),
+      url,
+      title: title || url,
+      favicon,
+      timestamp: new Date().toISOString()
+    };
+    
+    // Add to the beginning of the array (most recent first)
+    visits.unshift(historyItem);
+    
+    // Limit history size (keep last 1000 items)
+    const limitedVisits = visits.slice(0, 1000);
+    
+    // Save updated history
+    historyStore.set('visits', limitedVisits);
+    
+    // Update last visit time in settings
+    store.set('lastVisit', new Date().toISOString());
   }
 
   toggleHideUI() {
