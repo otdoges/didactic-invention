@@ -11,6 +11,7 @@ body {
   color: #333;
   height: 100vh;
   width: 100vw;
+  transition: background-color 0.5s ease;
 }
 
 #browser {
@@ -19,6 +20,16 @@ body {
   height: 100vh;
   width: 100vw;
   position: relative;
+  overflow: hidden;
+}
+
+#main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  height: 100vh;
+  transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* Vertical Sidebar / Tab Bar */
@@ -30,7 +41,8 @@ body {
   display: flex;
   flex-direction: column;
   z-index: 10;
-  transition: transform 0.3s ease;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
 }
 
 #sidebar.hidden {
@@ -66,11 +78,36 @@ body {
   justify-content: center;
   margin: 5px 0;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: background-color 0.2s, transform 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+
+.sidebar-btn::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background-color: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: width 0.4s ease-out, height 0.4s ease-out, opacity 0.4s ease-out;
+  opacity: 0;
+  z-index: -1;
 }
 
 .sidebar-btn:hover {
   background-color: rgba(255, 255, 255, 0.1);
+  transform: translateY(-2px);
+}
+
+.sidebar-btn:active::after {
+  width: 120px;
+  height: 120px;
+  opacity: 1;
+  transition: width 0.3s ease-out, height 0.3s ease-out, opacity 0.1s;
 }
 
 .tab-item {
@@ -86,15 +123,37 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  animation: tabEnter 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes tabEnter {
+  from { transform: translateX(-20px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
 }
 
 .tab-item:hover {
   background-color: #4b5563;
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
 }
 
 .tab-item.active {
   background-color: #60a5fa;
+  box-shadow: 0 4px 12px rgba(96, 165, 250, 0.4);
+}
+
+.tab-item.pinned::before {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 8px;
+  height: 8px;
+  background-color: #10b981;
+  border-radius: 50%;
+  z-index: 2;
 }
 
 .tab-favicon {
@@ -143,16 +202,15 @@ body {
   padding: 0 10px;
   background-color: #fff;
   border-bottom: 1px solid #e5e7eb;
-  position: absolute;
-  top: 0;
-  right: 0;
-  left: 80px;
+  position: relative;
   z-index: 5;
-  transition: transform 0.3s ease, left 0.3s ease;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s ease, box-shadow 0.3s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
 }
 
 #navbar.hidden {
   transform: translateY(-100%);
+  box-shadow: none;
 }
 
 #navbar.sidebar-hidden {
@@ -162,6 +220,9 @@ body {
 .nav-controls {
   display: flex;
   gap: 5px;
+  padding-right: 8px;
+  border-right: 1px solid #e5e7eb;
+  margin-right: 8px;
 }
 
 .nav-controls button {
@@ -175,40 +236,105 @@ body {
   justify-content: center;
   cursor: pointer;
   color: #333;
+  transition: background-color 0.2s, transform 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+
+.nav-controls button::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background-color: rgba(0, 0, 0, 0.05);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: width 0.4s ease-out, height 0.4s ease-out, opacity 0.4s ease-out;
+  opacity: 0;
+  z-index: -1;
 }
 
 .nav-controls button:hover {
   background-color: rgba(0, 0, 0, 0.05);
+  transform: translateY(-1px);
 }
 
-.address-bar {
+.nav-controls button:active::after {
+  width: 100px;
+  height: 100px;
+  opacity: 1;
+  transition: width 0.3s ease-out, height 0.3s ease-out, opacity 0.1s;
+}
+
+/* Zen-style Address Bar */
+.zen-address-bar {
   flex: 1;
   margin: 0 10px;
-}
-
-#url-input {
-  width: 100%;
-  height: 40px;
-  border-radius: 20px;
-  border: 1px solid #e5e7eb;
-  padding: 0 15px;
-  font-size: 14px;
-  outline: none;
+  position: relative;
+  display: flex;
+  align-items: center;
   background-color: #f3f4f6;
-  transition: border-color 0.2s, background-color 0.2s;
+  border-radius: 24px;
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  max-width: 900px;
+  margin: 0 auto;
 }
 
-#url-input:focus {
-  border-color: #60a5fa;
+.zen-address-bar:hover {
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.1);
+}
+
+.zen-address-bar:focus-within {
+  box-shadow: 0 4px 15px rgba(96, 165, 250, 0.2);
+  transform: translateY(-1px);
   background-color: #fff;
 }
 
-.nav-actions {
+.url-icon-container {
+  width: 40px;
+  height: 40px;
   display: flex;
-  gap: 5px;
+  align-items: center;
+  justify-content: center;
+  margin-left: 5px;
 }
 
-.nav-actions button {
+.site-icon {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+  transition: transform 0.2s ease;
+}
+
+.zen-address-bar:focus-within .site-icon {
+  color: #60a5fa;
+  transform: scale(1.1);
+}
+
+#url-input {
+  flex: 1;
+  height: 40px;
+  border: none;
+  padding: 0 10px;
+  font-size: 14px;
+  outline: none;
+  background-color: transparent;
+  transition: color 0.2s;
+}
+
+.url-actions {
+  display: flex;
+  align-items: center;
+  margin-right: 5px;
+}
+
+.url-actions button {
   width: 36px;
   height: 36px;
   border-radius: 50%;
@@ -218,11 +344,103 @@ body {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: #333;
+  color: #6b7280;
+  transition: color 0.2s, background-color 0.2s, transform 0.2s;
 }
 
-.nav-actions button:hover {
+.url-actions button:hover {
   background-color: rgba(0, 0, 0, 0.05);
+  color: #374151;
+  transform: translateY(-1px);
+}
+
+.url-actions button:active {
+  transform: translateY(0);
+}
+
+/* Bookmarks Bar */
+#bookmarks-bar {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  padding: 0 15px;
+  background-color: #f8fafc;
+  border-bottom: 1px solid #e5e7eb;
+  position: relative;
+  overflow-x: auto;
+  white-space: nowrap;
+  z-index: 4;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+  scrollbar-width: none; /* Firefox */
+}
+
+#bookmarks-bar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Edge */
+}
+
+#bookmarks-bar.hidden {
+  transform: translateY(-100%);
+  opacity: 0;
+}
+
+.bookmark-item {
+  display: flex;
+  align-items: center;
+  padding: 5px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-right: 10px;
+  transition: background-color 0.2s, transform 0.2s;
+  animation: fadeSlideIn 0.3s ease-out;
+  height: 28px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.bookmark-item:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+  transform: translateY(-2px);
+}
+
+.bookmark-icon {
+  width: 16px;
+  height: 16px;
+  margin-right: 6px;
+  flex-shrink: 0;
+}
+
+.bookmark-title {
+  font-size: 12px;
+  color: #4b5563;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Add bookmark button */
+.add-bookmark {
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  border: none;
+  background-color: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #6b7280;
+  transition: all 0.2s;
+}
+
+.add-bookmark:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+  color: #374151;
 }
 
 /* Settings Panel */
@@ -236,12 +454,18 @@ body {
   box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
   z-index: 20;
   transform: translateX(100%);
-  transition: transform 0.3s ease;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   overflow-y: auto;
 }
 
 .panel.visible {
   transform: translateX(0);
+  animation: panelEnter 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes panelEnter {
+  from { opacity: 0.7; }
+  to { opacity: 1; }
 }
 
 .panel.hidden {
@@ -349,11 +573,15 @@ body {
   background-color: rgba(0, 0, 0, 0.7);
   color: white;
   padding: 12px 16px;
-  border-radius: 4px;
+  border-radius: 6px;
   margin-top: 10px;
   animation: fadeIn 0.3s, fadeOut 0.3s 2.7s;
   opacity: 0;
   max-width: 300px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transform: translateY(0);
 }
 
 @keyframes fadeIn {
@@ -364,4 +592,125 @@ body {
 @keyframes fadeOut {
   from { opacity: 1; transform: translateY(0); }
   to { opacity: 0; transform: translateY(-20px); }
+}
+
+/* History panel */
+#history-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 400px;
+  height: 100%;
+  background-color: #fff;
+  box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+  z-index: 20;
+  transform: translateX(100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow-y: auto;
+}
+
+#history-panel.visible {
+  transform: translateX(0);
+}
+
+.history-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 20px;
+  border-bottom: 1px solid #f3f4f6;
+  transition: background-color 0.2s;
+  cursor: pointer;
+  animation: fadeInRight 0.3s ease-out;
+}
+
+@keyframes fadeInRight {
+  from { opacity: 0; transform: translateX(30px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.history-item:hover {
+  background-color: #f9fafb;
+}
+
+.history-favicon {
+  width: 16px;
+  height: 16px;
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.history-details {
+  flex: 1;
+  overflow: hidden;
+}
+
+.history-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1f2937;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.history-url {
+  font-size: 12px;
+  color: #6b7280;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.history-time {
+  font-size: 12px;
+  color: #9ca3af;
+  margin-left: 10px;
+  white-space: nowrap;
+}
+
+.history-delete {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: none;
+  background-color: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #9ca3af;
+  transition: all 0.2s;
+  opacity: 0;
+}
+
+.history-item:hover .history-delete {
+  opacity: 1;
+}
+
+.history-delete:hover {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+/* Add extra animations */
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes slideDown {
+  from { transform: translateY(-20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes fadeScale {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
 }
