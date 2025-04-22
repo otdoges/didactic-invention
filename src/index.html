@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Electron Browser</title>
+    <link rel="stylesheet" href="index.css" />
+    <!-- Material Icons for a modern UI -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  </head>
+  <body>
+    <div id="browser">
+      <!-- Vertical sidebar with tabs -->
+      <div id="sidebar" class="visible">
+        <div class="sidebar-top">
+          <button id="new-tab-btn" class="sidebar-btn" title="New Tab">
+            <span class="material-icons">add</span>
+          </button>
+        </div>
+        <div id="tabs-container">
+          <!-- Tabs will be dynamically added here -->
+        </div>
+        <div class="sidebar-bottom">
+          <button id="toggle-ui-btn" class="sidebar-btn" title="Hide UI (Alt+H)">
+            <span class="material-icons">visibility_off</span>
+          </button>
+          <button id="settings-btn" class="sidebar-btn" title="Settings">
+            <span class="material-icons">settings</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Navigation bar -->
+      <div id="navbar" class="visible">
+        <div class="nav-controls">
+          <button id="back-btn" title="Back">
+            <span class="material-icons">arrow_back</span>
+          </button>
+          <button id="forward-btn" title="Forward">
+            <span class="material-icons">arrow_forward</span>
+          </button>
+          <button id="refresh-btn" title="Refresh">
+            <span class="material-icons">refresh</span>
+          </button>
+        </div>
+        <div class="address-bar">
+          <input type="text" id="url-input" placeholder="Search or enter website name">
+        </div>
+        <div class="nav-actions">
+          <button id="copy-url-btn" title="Copy URL (Ctrl+Shift+C or Cmd+Shift+C)">
+            <span class="material-icons">content_copy</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Settings panel -->
+      <div id="settings-panel" class="panel hidden">
+        <div class="panel-header">
+          <h2>Settings</h2>
+          <button id="close-settings-btn" class="close-btn">
+            <span class="material-icons">close</span>
+          </button>
+        </div>
+        <div class="panel-content">
+          <div class="settings-section">
+            <h3>General</h3>
+            <div class="setting-item">
+              <label for="default-url">Default URL</label>
+              <input type="text" id="default-url" placeholder="https://www.google.com">
+            </div>
+            <div class="setting-item">
+              <label>
+                <input type="checkbox" id="toggle-ad-blocker">
+                Enable Ad Blocker
+              </label>
+            </div>
+          </div>
+          <div class="settings-section">
+            <h3>Appearance</h3>
+            <div class="setting-item">
+              <label>
+                <input type="checkbox" id="always-show-tabs">
+                Always show vertical tabs
+              </label>
+            </div>
+          </div>
+          <div class="settings-section">
+            <h3>Keyboard Shortcuts</h3>
+            <div class="shortcuts-list">
+              <div class="shortcut-item">
+                <span class="shortcut-desc">Copy current URL</span>
+                <span class="shortcut-keys">Ctrl+Shift+C / Cmd+Shift+C</span>
+              </div>
+              <div class="shortcut-item">
+                <span class="shortcut-desc">Toggle sidebar</span>
+                <span class="shortcut-keys">Alt+S</span>
+              </div>
+              <div class="shortcut-item">
+                <span class="shortcut-desc">Hide UI</span>
+                <span class="shortcut-keys">Alt+H</span>
+              </div>
+              <div class="shortcut-item">
+                <span class="shortcut-desc">New tab</span>
+                <span class="shortcut-keys">Ctrl+T / Cmd+T</span>
+              </div>
+              <div class="shortcut-item">
+                <span class="shortcut-desc">Close tab</span>
+                <span class="shortcut-keys">Ctrl+W / Cmd+W</span>
+              </div>
+            </div>
+          </div>
+          <div class="settings-section">
+            <h3>About</h3>
+            <p>Electron Browser v1.0.0</p>
+            <p>A Chrome-based browser with vertical tabs and privacy features.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notification container -->
+      <div id="notification-container"></div>
+    </div>
+
+    <script src="renderer.js"></script>
+  </body>
+</html>
