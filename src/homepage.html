@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Home</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #fff;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      animation: gradientShift 15s ease infinite alternate;
+    }
+    
+    @keyframes gradientShift {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    
+    .container {
+      max-width: 800px;
+      padding: 40px;
+      animation: fadeIn 0.8s ease-out;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    h1 {
+      font-size: 3.5rem;
+      margin-bottom: 1rem;
+      font-weight: 700;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    }
+    
+    p {
+      font-size: 1.2rem;
+      margin-bottom: 2rem;
+      opacity: 0.9;
+    }
+    
+    .search-container {
+      width: 100%;
+      max-width: 700px;
+      margin-bottom: 3rem;
+      position: relative;
+      transition: all 0.3s ease;
+      animation: scaleIn 0.5s ease-out 0.3s both;
+    }
+    
+    @keyframes scaleIn {
+      from { transform: scale(0.9); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    
+    input.search-box {
+      width: 100%;
+      height: 60px;
+      padding: 0 30px;
+      border-radius: 30px;
+      border: none;
+      outline: none;
+      font-size: 1.2rem;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+      transition: all 0.3s ease;
+      background-color: rgba(255, 255, 255, 0.9);
+    }
+    
+    input.search-box:focus {
+      background-color: #fff;
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+      transform: translateY(-2px);
+    }
+    
+    .quick-links {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      width: 100%;
+      max-width: 700px;
+      animation: fadeIn 0.8s ease-out 0.5s both;
+    }
+    
+    .quick-link {
+      background-color: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(10px);
+      border-radius: 15px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-decoration: none;
+      color: #fff;
+    }
+    
+    .quick-link:hover {
+      background-color: rgba(255, 255, 255, 0.25);
+      transform: translateY(-5px);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    }
+    
+    .quick-link i {
+      font-size: 2.5rem;
+      margin-bottom: 15px;
+    }
+    
+    .quick-link span {
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+    
+    .time-date {
+      position: absolute;
+      top: 40px;
+      right: 40px;
+      text-align: right;
+      animation: fadeIn 0.8s ease-out 0.7s both;
+      font-size: 1.2rem;
+      font-weight: 300;
+    }
+    
+    .weather {
+      position: absolute;
+      top: 40px;
+      left: 40px;
+      text-align: left;
+      animation: fadeIn 0.8s ease-out 0.7s both;
+      font-size: 1.2rem;
+      font-weight: 300;
+    }
+  </style>
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+</head>
+<body>
+  <div class="time-date" id="time-date">
+    12:00 PM<br>
+    April 22, 2025
+  </div>
+  
+  <div class="weather" id="weather">
+    Clear Sky<br>
+    72°F
+  </div>
+  
+  <div class="container">
+    <h1>Welcome</h1>
+    <p>Start browsing or search the web</p>
+    
+    <div class="search-container">
+      <input type="text" class="search-box" id="search-box" placeholder="Search or enter web address" autocomplete="off">
+    </div>
+    
+    <div class="quick-links">
+      <a href="https://github.com" class="quick-link">
+        <i class="material-icons">code</i>
+        <span>GitHub</span>
+      </a>
+      <a href="https://youtube.com" class="quick-link">
+        <i class="material-icons">smart_display</i>
+        <span>YouTube</span>
+      </a>
+      <a href="https://twitter.com" class="quick-link">
+        <i class="material-icons">chat</i>
+        <span>Twitter</span>
+      </a>
+      <a href="https://reddit.com" class="quick-link">
+        <i class="material-icons">forum</i>
+        <span>Reddit</span>
+      </a>
+    </div>
+  </div>
+
+  <script>
+    // Update time and date
+    function updateDateTime() {
+      const now = new Date();
+      const timeElement = document.getElementById('time-date');
+      const options = { hour: 'numeric', minute: 'numeric', hour12: true };
+      const dateOptions = { month: 'long', day: 'numeric', year: 'numeric' };
+      
+      const timeString = now.toLocaleTimeString(undefined, options);
+      const dateString = now.toLocaleDateString(undefined, dateOptions);
+      
+      timeElement.innerHTML = `${timeString}<br>${dateString}`;
+    }
+    
+    // Initialize and set interval
+    updateDateTime();
+    setInterval(updateDateTime, 1000);
+    
+    // Handle search
+    const searchBox = document.getElementById('search-box');
+    searchBox.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        const query = searchBox.value.trim();
+        if (query.length > 0) {
+          // Use the same logic as in the main browser for determining URLs vs searches
+          let navigateUrl = query;
+          if (!query.startsWith('http://') && !query.startsWith('https://')) {
+            if (query.includes('.') && !query.includes(' ')) {
+              navigateUrl = 'https://' + query;
+            } else {
+              navigateUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+            }
+          }
+          
+          // Navigate to URL - will be intercepted by the containing browser view
+          window.location.href = navigateUrl;
+        }
+      }
+    });
+    
+    // Get random weather for demo
+    function setRandomWeather() {
+      const weatherElement = document.getElementById('weather');
+      const conditions = ['Clear Sky', 'Partly Cloudy', 'Sunny', 'Light Rain', 'Cloudy'];
+      const randomCondition = conditions[Math.floor(Math.random() * conditions.length)];
+      const randomTemp = Math.floor(Math.random() * 20) + 65; // 65-85°F
+      
+      weatherElement.innerHTML = `${randomCondition}<br>${randomTemp}°F`;
+    }
+    
+    setRandomWeather();
+  </script>
+</body>
+</html>

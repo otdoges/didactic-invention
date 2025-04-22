@@ -1,10 +1,11 @@
-const { app, BrowserWindow, BrowserView, ipcMain, clipboard, globalShortcut, Menu, session } = require('electron');
+const { app, BrowserWindow, BrowserView, ipcMain, clipboard, globalShortcut, Menu, session, shell } = require('electron');
 const path = require('node:path');
 const electronLocalshortcut = require('electron-localshortcut');
 const Store = require('electron-store');
 const { ElectronBlocker } = require('@cliqz/adblocker-electron');
 const fetch = require('cross-fetch');
 const fs = require('fs');
+const url = require('url');
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) {
