@@ -6,8 +6,15 @@
     <link rel="stylesheet" href="index.css" />
     <!-- Material Icons for a modern UI -->
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <!-- Google Fonts - Roboto -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <!-- Favicon -->
+    <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
   </head>
   <body>
+    <!-- Loading bar - appears at the top of the browser during page loading -->
+    <div id="loading-bar"></div>
+    
     <div id="browser">
       <!-- Vertical sidebar with tabs -->
       <div id="sidebar" class="visible">
@@ -93,7 +100,272 @@
         </div>
       </div>
       
-      <!-- Settings panel -->
+      <!-- Settings Modal Overlay -->
+      <div id="settings-overlay" class="settings-overlay"></div>
+      
+      <!-- New Settings Modal -->
+      <div id="settings-modal" class="hidden">
+        <div class="settings-container">
+          <div class="settings-sidebar">
+            <div class="settings-nav-item active" data-page="general">
+              <span class="material-icons">tune</span>
+              <span>General</span>
+            </div>
+            <div class="settings-nav-item" data-page="appearance">
+              <span class="material-icons">palette</span>
+              <span>Appearance</span>
+            </div>
+            <div class="settings-nav-item" data-page="privacy">
+              <span class="material-icons">shield</span>
+              <span>Privacy</span>
+            </div>
+            <div class="settings-nav-item" data-page="extensions">
+              <span class="material-icons">extension</span>
+              <span>Extensions</span>
+            </div>
+            <div class="settings-nav-item" data-page="advanced">
+              <span class="material-icons">code</span>
+              <span>Advanced</span>
+            </div>
+            <div class="settings-nav-item" data-page="about">
+              <span class="material-icons">info</span>
+              <span>About</span>
+            </div>
+          </div>
+          
+          <div class="settings-content">
+            <!-- General Settings -->
+            <div id="general-settings" class="settings-page active">
+              <div class="settings-header">
+                <h2>General Settings</h2>
+                <button id="close-settings-modal-btn" class="close-btn">
+                  <span class="material-icons">close</span>
+                </button>
+              </div>
+              
+              <div class="setting-item">
+                <label for="default-url">Default URL</label>
+                <input type="text" id="default-url" placeholder="homepage">
+              </div>
+              
+              <div class="setting-item">
+                <label for="search-engine">Default Search Engine</label>
+                <select id="search-engine">
+                  <option value="google">Google</option>
+                  <option value="bing">Bing</option>
+                  <option value="duckduckgo">DuckDuckGo</option>
+                  <option value="yahoo">Yahoo</option>
+                </select>
+              </div>
+              
+              <div class="setting-item">
+                <label for="bookmark-bar">
+                  <input type="checkbox" id="bookmark-bar-toggle">
+                  Show Bookmarks Bar
+                </label>
+              </div>
+            </div>
+            
+            <!-- Appearance Settings -->
+            <div id="appearance-settings" class="settings-page">
+              <div class="settings-header">
+                <h2>Appearance</h2>
+                <button class="close-btn">
+                  <span class="material-icons">close</span>
+                </button>
+              </div>
+              
+              <div class="setting-item">
+                <div class="setting-row">
+                  <span>Dark Mode</span>
+                  <div id="theme-switch" class="theme-switch"></div>
+                </div>
+                <p class="setting-description">Enable dark mode for a more comfortable browsing experience at night</p>
+              </div>
+              
+              <div class="setting-item">
+                <label>
+                  <input type="checkbox" id="always-show-tabs">
+                  Always show vertical tabs
+                </label>
+              </div>
+              
+              <div class="setting-item">
+                <label for="zoom-level">Default Zoom Level</label>
+                <select id="zoom-level">
+                  <option value="0.75">75%</option>
+                  <option value="0.9">90%</option>
+                  <option value="1" selected>100%</option>
+                  <option value="1.1">110%</option>
+                  <option value="1.25">125%</option>
+                  <option value="1.5">150%</option>
+                </select>
+              </div>
+            </div>
+            
+            <!-- Privacy Settings -->
+            <div id="privacy-settings" class="settings-page">
+              <div class="settings-header">
+                <h2>Privacy</h2>
+                <button class="close-btn">
+                  <span class="material-icons">close</span>
+                </button>
+              </div>
+              
+              <div class="setting-item">
+                <label>
+                  <input type="checkbox" id="toggle-ad-blocker" checked>
+                  Enable Ad Blocker
+                </label>
+                <p class="setting-description">Block ads and trackers (requires restart)</p>
+              </div>
+              
+              <div class="setting-item">
+                <label>
+                  <input type="checkbox" id="do-not-track">
+                  Send Do Not Track requests
+                </label>
+              </div>
+              
+              <div class="setting-item">
+                <button id="clear-history-btn" class="settings-btn">
+                  <span class="material-icons">delete</span>
+                  Clear Browsing History
+                </button>
+              </div>
+              
+              <div class="setting-item">
+                <button id="clear-cookies-btn" class="settings-btn">
+                  <span class="material-icons">cookie</span>
+                  Clear Cookies and Site Data
+                </button>
+              </div>
+            </div>
+            
+            <!-- Extensions Settings -->
+            <div id="extensions-settings" class="settings-page">
+              <div class="settings-header">
+                <h2>Extensions</h2>
+                <button class="close-btn">
+                  <span class="material-icons">close</span>
+                </button>
+              </div>
+              
+              <div class="extension-list">
+                <div class="extension-card">
+                  <div class="extension-icon">
+                    <span class="material-icons">block</span>
+                  </div>
+                  <div class="extension-details">
+                    <div class="extension-title">Brave Ad Blocker</div>
+                    <div class="extension-description">Block ads and trackers for faster browsing</div>
+                    <div class="extension-footer">
+                      <div class="extension-author">Built-in</div>
+                      <div class="extension-toggle active"></div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="extension-card">
+                  <div class="extension-icon">
+                    <span class="material-icons">dark_mode</span>
+                  </div>
+                  <div class="extension-details">
+                    <div class="extension-title">Dark Reader</div>
+                    <div class="extension-description">Dark mode for every website</div>
+                    <div class="extension-footer">
+                      <div class="extension-author">darkreader.org</div>
+                      <div class="extension-toggle"></div>
+                    </div>
+                  </div>
+                </div>
+                
+                <button id="add-extension-btn" class="add-btn">
+                  <span class="material-icons">add</span>
+                  Add Extension
+                </button>
+              </div>
+            </div>
+            
+            <!-- Advanced Settings -->
+            <div id="advanced-settings" class="settings-page">
+              <div class="settings-header">
+                <h2>Advanced</h2>
+                <button class="close-btn">
+                  <span class="material-icons">close</span>
+                </button>
+              </div>
+              
+              <div class="setting-item">
+                <label for="hardware-acceleration">
+                  <input type="checkbox" id="hardware-acceleration" checked>
+                  Use hardware acceleration when available
+                </label>
+              </div>
+              
+              <div class="setting-item">
+                <label for="proxy-settings">
+                  <input type="checkbox" id="proxy-settings">
+                  Use custom proxy settings
+                </label>
+              </div>
+              
+              <div class="setting-item">
+                <button id="clear-cache-btn" class="settings-btn">
+                  <span class="material-icons">cleaning_services</span>
+                  Clear Cache
+                </button>
+              </div>
+              
+              <div class="setting-item">
+                <button id="dev-tools-btn" class="settings-btn">
+                  <span class="material-icons">developer_mode</span>
+                  Open Developer Tools
+                </button>
+              </div>
+            </div>
+            
+            <!-- About Settings -->
+            <div id="about-settings" class="settings-page">
+              <div class="settings-header">
+                <h2>About</h2>
+                <button class="close-btn">
+                  <span class="material-icons">close</span>
+                </button>
+              </div>
+              
+              <div class="about-logo">
+                <img src="assets/icon.svg" alt="Electron Browser Logo" width="80">
+                <h3>Electron Browser</h3>
+                <p>Version 1.1.0</p>
+              </div>
+              
+              <div class="about-info">
+                <p>A Chrome-based browser with vertical tabs, privacy features, and dark mode.</p>
+                <p>Built with Electron and modern web technologies.</p>
+                <p>© 2025 All rights reserved.</p>
+              </div>
+              
+              <div class="about-buttons">
+                <button class="about-btn">
+                  <span class="material-icons">code</span>
+                  Source Code
+                </button>
+                <button class="about-btn">
+                  <span class="material-icons">bug_report</span>
+                  Report Issue
+                </button>
+                <button class="about-btn">
+                  <span class="material-icons">update</span>
+                  Check for Updates
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Old Settings panel (keeping for reference, will be removed) -->
       <div id="settings-panel" class="panel hidden">
         <div class="panel-header">
           <h2>Settings</h2>
@@ -105,12 +377,12 @@
           <div class="settings-section">
             <h3>General</h3>
             <div class="setting-item">
-              <label for="default-url">Default URL</label>
-              <input type="text" id="default-url" placeholder="https://www.google.com">
+              <label for="default-url-old">Default URL</label>
+              <input type="text" id="default-url-old" placeholder="https://www.google.com">
             </div>
             <div class="setting-item">
               <label>
-                <input type="checkbox" id="toggle-ad-blocker">
+                <input type="checkbox" id="toggle-ad-blocker-old">
                 Enable Ad Blocker
               </label>
             </div>
@@ -119,7 +391,7 @@
             <h3>Appearance</h3>
             <div class="setting-item">
               <label>
-                <input type="checkbox" id="always-show-tabs">
+                <input type="checkbox" id="always-show-tabs-old">
                 Always show vertical tabs
               </label>
             </div>
@@ -159,6 +431,38 @@
 
       <!-- Notification container -->
       <div id="notification-container"></div>
+      
+      <!-- Page loading spinner template (will be inserted dynamically) -->
+      <template id="loading-spinner-template">
+        <div class="page-loading-spinner"></div>
+      </template>
+      
+      <!-- Media player template for audio/video content -->
+      <template id="media-player-template">
+        <div class="media-player">
+          <div class="media-player-header">
+            <div class="media-player-title">Media Player</div>
+            <button class="media-close-btn">
+              <span class="material-icons">close</span>
+            </button>
+          </div>
+          <div class="media-content">
+            <!-- Content inserted dynamically -->
+          </div>
+          <div class="media-controls">
+            <button class="media-control-btn media-play">
+              <span class="material-icons">play_arrow</span>
+            </button>
+            <div class="media-progress">
+              <div class="media-progress-fill"></div>
+            </div>
+            <div class="media-time">00:00 / 00:00</div>
+            <button class="media-control-btn media-fullscreen">
+              <span class="material-icons">fullscreen</span>
+            </button>
+          </div>
+        </div>
+      </template>
     </div>
 
     <script src="renderer.js"></script>
