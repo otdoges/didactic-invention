@@ -383,61 +383,177 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Tab closed event
     window.browserAPI.onTabClosed((event, data) => {
-      // Update local tabs array
-      refreshTabs();
-    });
-
-    // Tab activated event
-    window.browserAPI.onTabActivated((event, data) => {
-      activeTabId = data.id;
-      updateActiveTab();
-      updateUrlBar();
-      updateBookmarkButtonState();
-    });
-
-    // Tab updated event
-    window.browserAPI.onTabUpdated((event, data) => {
-      updateTab(data);
-      if (data.id === activeTabId) {
-        if (data.url) {
-          updateUrlBar();
-          updateBookmarkButtonState();
-        }
-        if (data.favicon) {
-          currentFavicon = data.favicon;
-          updateSiteIcon(data.favicon);
-        }
       }
-    });
+    }
+    
+    return searchEngine;
+  }
 
-    // Sidebar toggled event
-    window.browserAPI.onSidebarToggled((event, data) => {
-      if (data.visible) {
+  // Toggle settings panel
+  function toggleSettings() {
+    settingsVisible = !settingsVisible;
+    if (settingsPanel) {
+      if (settingsVisible) {
+        settingsPanel.classList.remove('hidden');
+        settingsPanel.classList.add('visible');
+      } else {
+        settingsPanel.classList.add('hidden');
+        settingsPanel.classList.remove('visible');
+      }
+    }
+  }
+  
+  // Toggle history panel
+  function toggleHistory() {
+    historyVisible = !historyVisible;
+    if (historyPanel) {
+      if (historyVisible) {
+        historyPanel.classList.remove('hidden');
+        historyPanel.classList.add('visible');
+      } else {
+        historyPanel.classList.add('hidden');
+        historyPanel.classList.remove('visible');
+      }
+    }
+  }
+  
+  // Start loading indicators
+  function startLoading(tabId) {
+    const tabItem = document.querySelector(`.tab-item[data-tab-id="${tabId}"]`);
+    const reloadBtn = document.getElementById('reload-btn');
+    
+    if (tabItem) {
+      tabItem.classList.add('loading');
+    }
+    
+    if (reloadBtn) {
+      reloadBtn.classList.add('loading');
+      reloadBtn.querySelector('span').textContent = 'sync';
+    }
+    
+    // Show loading bar
+    if (loadingBar) {
+      loadingBar.classList.add('loading');
+    }
+    
+    // Clear any existing loading timer for this tab
+    if (loadingTimers[tabId]) {
+      clearTimeout(loadingTimers[tabId]);
+    }
+    
+    // Set a timeout to hide loading indicators if loading takes too long
+    loadingTimers[tabId] = setTimeout(() => {
+      stopLoading(tabId);
+    }, 10000); // 10 seconds timeout
+  }
+  
+  // Stop loading indicators
+  function stopLoading(tabId) {
+    const tabItem = document.querySelector(`.tab-item[data-tab-id="${tabId}"]`);
+    const reloadBtn = document.getElementById('reload-btn');
+    
+    if (tabItem) {
+      tabItem.classList.remove('loading');
+    }
+    
+    if (reloadBtn) {
+      reloadBtn.classList.remove('loading');
+      reloadBtn.querySelector('span').textContent = 'refresh';
+    }
+    
+    // Hide loading bar
+    if (loadingBar) {
+      loadingBar.classList.remove('loading');
+    }
+    
+    // Clear the loading timer for this tab
+    if (loadingTimers[tabId]) {
+      clearTimeout(loadingTimers[tabId]);
+      delete loadingTimers[tabId];
+    }
+  }
+  
+  // Show error page
+  function showErrorPage(webview, errorMessage) {
+    const errorHTML = `
+      <html>
+        <head>
+          <title>Page load failed</title>
+          <style>
+            body {
+              font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+              color: #333;
+              text-align: center;
+              padding: 50px 20px;
+              background-color: #f7f7f7;
+            }
+            .error-container {
+              max-width: 500px;
+              margin: 0 auto;
+              background-color: white;
+              border-radius: 8px;
+              padding: 30px;
+              box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            }
+            .error-icon {
+              font-size: 64px;
+              color: #f44336;
+              margin-bottom: 20px;
+            }
+            h1 {
+              font-size: 24px;
+              margin-bottom: 10px;
+            }
+            p {
+              font-size: 16px;
+              color: #666;
+              margin-bottom: 20px;
+            }
+            button {
+              background-color: #60a5fa;
+              color: white;
+              border: none;
+              padding: 10px 20px;
+              border-radius: 4px;
+              font-size: 14px;
+              cursor: pointer;
+              transition: background-color 0.2s;
+            }
+            button:hover {
+              background-color: #3b82f6;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="error-container">
+            <div class="error-icon">⚠️</div>
+            <h1>Page failed to load</h1>
+            <p>${errorMessage || 'The requested page could not be loaded. Please check your connection and try again.'}</p>
+            <button onclick="window.location.reload()">Try Again</button>
+          </div>
+        </body>
+      </html>
+    `;
+    
+    webview.src = `data:text/html,${encodeURIComponent(errorHTML)}`;
+  }
+
+  // UI visibility changed event
+  window.browserAPI.onUIVisibilityChanged((event, data) => {
+    if (data.hidden) {
+      sidebar.classList.add('hidden');
+      navbar.classList.add('hidden');
+      bookmarksBar.classList.add('hidden');
+      mainContent.style.marginLeft = '0';
+    } else {
+      if (settings.sidebarVisible) {
         sidebar.classList.remove('hidden');
         mainContent.style.marginLeft = '80px';
-      } else {
-        sidebar.classList.add('hidden');
-        mainContent.style.marginLeft = '0';
       }
-      animateContent();
-    });
-
-    // Bookmarks bar toggled event
-    window.browserAPI.onBookmarksBarToggled((event, data) => {
-      if (data.visible) {
+      navbar.classList.remove('hidden');
+      if (settings.showBookmarksBar) {
         bookmarksBar.classList.remove('hidden');
-      } else {
-        bookmarksBar.classList.add('hidden');
       }
-      animateContent();
-    });
-
-    // UI visibility changed event
-    window.browserAPI.onUIVisibilityChanged((event, data) => {
-      if (data.hidden) {
-        sidebar.classList.add('hidden');
-        navbar.classList.add('hidden');
-        bookmarksBar.classList.add('hidden');
         mainContent.style.marginLeft = '0';
       } else {
         if (settings.sidebarVisible) {
