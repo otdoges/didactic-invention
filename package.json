@@ -1,17 +1,18 @@
 {
-  "name": "electron-browser",
-  "productName": "electron-browser",
+  "name": "zen-browser",
+  "productName": "Zen Browser",
   "version": "1.0.0",
-  "description": "Chrome-based browser with vertical tabs and privacy features",
+  "description": "Modern Electron browser with vertical tabs and advanced privacy features",
   "main": "src/index.js",
   "scripts": {
     "start": "electron-forge start",
     "package": "electron-forge package",
     "make": "electron-forge make",
     "publish": "electron-forge publish",
-    "lint": "echo \"No linting configured\""
+    "lint": "echo \"No linting configured\"",
+    "install-adblock": "git clone https://github.com/brave/adblock-rust.git && cd adblock-rust && npm install"
   },
-  "keywords": ["browser", "electron", "tabs", "privacy"],
+  "keywords": ["browser", "electron", "tabs", "privacy", "adblock", "zen"],
   "author": {
     "name": "otdoges",
     "email": "otdoges@proton.me"
@@ -26,10 +27,12 @@
     "electron-squirrel-startup": "^1.0.1",
     "electron-localshortcut": "^3.2.1",
     "electron-store": "^8.1.0",
-    "@cliqz/adblocker-electron": "^1.26.16",
+    "adblock-rs": "npm:@brave/adblock-rust@^0.4.17",
     "cross-fetch": "^4.0.0",
-    "@cliqz/adblocker-electron-preload": "^1.26.16",
-    "mousetrap": "^1.6.5"
+    "mousetrap": "^1.6.5",
+    "electron-extensions": "^7.0.0-beta.3",
+    "fs-extra": "^11.2.0",
+    "axios": "^1.6.7"
   },
   "devDependencies": {
     "@electron-forge/cli": "^7.8.0",

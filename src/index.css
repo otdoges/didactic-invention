@@ -1113,7 +1113,7 @@ body {
   border-radius: 50%;
   border: 3px solid var(--bg-tertiary);
   border-top-color: var(--accent-color);
-  animation: spin 1s linear infinite;
+    animation: spin 1s linear infinite;
   z-index: 50;
 }
 
