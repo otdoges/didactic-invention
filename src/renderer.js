@@ -25,17 +25,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const loadingSpinnerTemplate = document.getElementById('loading-spinner-template');
   const mediaPlayerTemplate = document.getElementById('media-player-template');
   const bookmarkBarToggle = document.getElementById('bookmark-bar-toggle');
-  const clearHistoryBtn = document.getElementById('clear-history-btn');
-  const settingsNavItems = document.querySelectorAll('.settings-nav-item');
   const bookmarksBar = document.getElementById('bookmarks-bar');
-  const settingsPanel = document.getElementById('settings-panel');
   const historyPanel = document.getElementById('history-panel');
-  const closeSettingsBtn = document.getElementById('close-settings-btn');
   const closeHistoryBtn = document.getElementById('close-history-btn');
+  const historyItemsContainer = document.getElementById('history-items-container');
   const defaultUrlInput = document.getElementById('default-url');
   const toggleAdBlockerCheckbox = document.getElementById('toggle-ad-blocker');
   const alwaysShowTabsCheckbox = document.getElementById('always-show-tabs');
-  const notificationContainer = document.getElementById('notification-container');
+  const settingsNavItems = document.querySelectorAll('.settings-nav-item');
 
   // Global variables
   let activeTabId = null;
