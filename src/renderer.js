@@ -3,17 +3,27 @@ document.addEventListener('DOMContentLoaded', () => {
   // DOM Elements
   const sidebar = document.getElementById('sidebar');
   const navbar = document.getElementById('navbar');
+  const mainContent = document.getElementById('main-content');
   const tabsContainer = document.getElementById('tabs-container');
   const urlInput = document.getElementById('url-input');
+  const siteIcon = document.querySelector('.site-icon');
   const newTabBtn = document.getElementById('new-tab-btn');
+  const homeBtn = document.getElementById('home-btn');
   const backBtn = document.getElementById('back-btn');
   const forwardBtn = document.getElementById('forward-btn');
   const refreshBtn = document.getElementById('refresh-btn');
   const copyUrlBtn = document.getElementById('copy-url-btn');
+  const bookmarkBtn = document.getElementById('bookmark-btn');
   const toggleUiBtn = document.getElementById('toggle-ui-btn');
+  const historyBtn = document.getElementById('history-btn');
   const settingsBtn = document.getElementById('settings-btn');
+  const bookmarksBar = document.getElementById('bookmarks-bar');
   const settingsPanel = document.getElementById('settings-panel');
+  const historyPanel = document.getElementById('history-panel');
   const closeSettingsBtn = document.getElementById('close-settings-btn');
+  const closeHistoryBtn = document.getElementById('close-history-btn');
+  const clearHistoryBtn = document.getElementById('clear-history-btn');
+  const historyItemsContainer = document.getElementById('history-items-container');
   const defaultUrlInput = document.getElementById('default-url');
   const toggleAdBlockerCheckbox = document.getElementById('toggle-ad-blocker');
   const alwaysShowTabsCheckbox = document.getElementById('always-show-tabs');
@@ -23,6 +33,9 @@ document.addEventListener('DOMContentLoaded', () => {
   let activeTabId = null;
   let tabs = [];
   let settings = {};
+  let bookmarks = [];
+  let history = [];
+  let currentFavicon = null;
 
   // Initialize
   init();
@@ -35,11 +48,49 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize UI based on settings
     updateUIFromSettings();
     
+    // Load bookmarks
+    await loadBookmarks();
+    
     // Set up event listeners
     setupEventListeners();
     
     // Set up IPC listeners
     setupIPCListeners();
+    
+    // Apply custom animations
+    applyCustomAnimations();
+  }
+  
+  // Load bookmarks from store
+  async function loadBookmarks() {
+    try {
+      const bookmarksData = await window.browserAPI.getBookmarks();
+      bookmarks = bookmarksData.bookmarks;
+      renderBookmarksBar();
+    } catch (error) {
+      console.error('Failed to load bookmarks:', error);
+    }
+  }
+  
+  // Apply additional animations to UI elements
+  function applyCustomAnimations() {
+    // Add subtle hover animations to various UI elements
+    document.querySelectorAll('.sidebar-btn, .nav-controls button, .url-actions button').forEach(btn => {
+      btn.addEventListener('mouseenter', () => {
+        btn.style.transform = 'translateY(-2px)';
+        btn.style.transition = 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)';
+      });
+      
+      btn.addEventListener('mouseleave', () => {
+        btn.style.transform = 'translateY(0)';
+      });
+    });
+    
+    // Add pulse animation to the new tab button
+    newTabBtn.classList.add('pulse-animation');
+    setTimeout(() => {
+      newTabBtn.classList.remove('pulse-animation');
+    }, 2000);
   }
 
   // Setup all UI event listeners
