@@ -436,6 +436,322 @@ document.addEventListener('DOMContentLoaded', () => {
       showNotification('URL copied to clipboard');
     }
   }
+  
+  // Update the site icon in the address bar
+  function updateSiteIcon(faviconUrl) {
+    if (faviconUrl) {
+      // Create an image element
+      const img = document.createElement('img');
+      img.src = faviconUrl;
+      img.style.width = '16px';
+      img.style.height = '16px';
+      siteIcon.innerHTML = '';
+      siteIcon.appendChild(img);
+    } else {
+      // Reset to default icon
+      siteIcon.innerHTML = '<span class="material-icons">public</span>';
+    }
+  }
+  
+  // Add current page to bookmarks
+  async function addCurrentPageToBookmarks() {
+    const currentUrl = window.browserAPI.getCurrentUrl();
+    const currentTab = tabs.find(tab => tab.id === activeTabId);
+    
+    if (!currentUrl || !currentTab) return;
+    
+    // Check if already bookmarked
+    const isBookmarked = bookmarks.some(bookmark => bookmark.url === currentUrl);
+    
+    if (isBookmarked) {
+      showNotification('This page is already bookmarked');
+      return;
+    }
+    
+    const newBookmark = {
+      id: 'bookmark_' + Date.now(),
+      title: currentTab.title || 'Untitled',
+      url: currentUrl,
+      icon: currentTab.favicon,
+      dateAdded: new Date().toISOString()
+    };
+    
+    try {
+      await window.browserAPI.addBookmark(newBookmark);
+      bookmarks.push(newBookmark);
+      renderBookmarksBar();
+      showNotification('Bookmark added');
+      updateBookmarkButtonState();
+      
+      // Add visual feedback
+      bookmarkBtn.querySelector('.material-icons').textContent = 'bookmark';
+      setTimeout(() => {
+        // Animate the bookmark button
+        bookmarkBtn.classList.add('pulse-animation');
+        setTimeout(() => {
+          bookmarkBtn.classList.remove('pulse-animation');
+        }, 1000);
+      }, 100);
+    } catch (error) {
+      console.error('Failed to add bookmark:', error);
+      showNotification('Failed to add bookmark');
+    }
+  }
+  
+  // Update bookmark button state based on current URL
+  function updateBookmarkButtonState() {
+    const currentUrl = window.browserAPI.getCurrentUrl();
+    const isBookmarked = bookmarks.some(bookmark => bookmark.url === currentUrl);
+    
+    const icon = bookmarkBtn.querySelector('.material-icons');
+    if (isBookmarked) {
+      icon.textContent = 'bookmark';
+    } else {
+      icon.textContent = 'bookmark_border';
+    }
+  }
+  
+  // Render bookmarks in the bookmarks bar
+  function renderBookmarksBar() {
+    // Clear current bookmarks
+    bookmarksBar.innerHTML = '';
+    
+    // Add each bookmark
+    bookmarks.forEach(bookmark => {
+      const bookmarkElement = createBookmarkElement(bookmark);
+      bookmarksBar.appendChild(bookmarkElement);
+    });
+    
+    // Add the "add bookmark" button
+    const addButton = document.createElement('button');
+    addButton.className = 'add-bookmark';
+    addButton.title = 'Add bookmark';
+    addButton.innerHTML = '<span class="material-icons">add</span>';
+    addButton.addEventListener('click', () => {
+      addCurrentPageToBookmarks();
+    });
+    
+    bookmarksBar.appendChild(addButton);
+  }
+  
+  // Create a bookmark element for the bookmark bar
+  function createBookmarkElement(bookmark) {
+    const bookmarkElement = document.createElement('div');
+    bookmarkElement.className = 'bookmark-item';
+    bookmarkElement.setAttribute('data-bookmark-id', bookmark.id);
+    bookmarkElement.title = bookmark.title;
+    
+    // Favicon
+    const favicon = document.createElement('img');
+    favicon.className = 'bookmark-icon';
+    favicon.src = bookmark.icon || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%236B7280" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>';
+    favicon.onerror = () => {
+      favicon.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%236B7280" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>';
+    };
+    
+    // Title
+    const title = document.createElement('span');
+    title.className = 'bookmark-title';
+    title.textContent = bookmark.title;
+    
+    // Click event to navigate
+    bookmarkElement.addEventListener('click', () => {
+      if (activeTabId) {
+        window.browserAPI.navigateTo(activeTabId, bookmark.url);
+      } else {
+        window.browserAPI.createTab(bookmark.url);
+      }
+    });
+    
+    // Right-click to delete
+    bookmarkElement.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      if (confirm('Delete this bookmark?')) {
+        deleteBookmark(bookmark.id);
+      }
+    });
+    
+    // Append elements
+    bookmarkElement.appendChild(favicon);
+    bookmarkElement.appendChild(title);
+    
+    return bookmarkElement;
+  }
+  
+  // Delete a bookmark
+  async function deleteBookmark(bookmarkId) {
+    try {
+      await window.browserAPI.deleteBookmark(bookmarkId);
+      bookmarks = bookmarks.filter(b => b.id !== bookmarkId);
+      renderBookmarksBar();
+      showNotification('Bookmark deleted');
+      updateBookmarkButtonState();
+    } catch (error) {
+      console.error('Failed to delete bookmark:', error);
+      showNotification('Failed to delete bookmark');
+    }
+  }
+  
+  // Open history panel
+  async function openHistory() {
+    // Load history data
+    try {
+      history = await window.browserAPI.getHistory();
+      renderHistory();
+      historyPanel.classList.add('visible');
+    } catch (error) {
+      console.error('Failed to load history:', error);
+      showNotification('Failed to load history');
+    }
+  }
+  
+  // Close history panel
+  function closeHistory() {
+    historyPanel.classList.remove('visible');
+  }
+  
+  // Clear history
+  async function clearHistory() {
+    if (confirm('Are you sure you want to clear all browsing history?')) {
+      try {
+        await window.browserAPI.clearHistory();
+        history = [];
+        renderHistory();
+        showNotification('History cleared');
+      } catch (error) {
+        console.error('Failed to clear history:', error);
+        showNotification('Failed to clear history');
+      }
+    }
+  }
+  
+  // Render history items
+  function renderHistory() {
+    // Clear current history items
+    historyItemsContainer.innerHTML = '';
+    
+    if (history.length === 0) {
+      const emptyMessage = document.createElement('div');
+      emptyMessage.className = 'empty-history';
+      emptyMessage.textContent = 'No browsing history';
+      historyItemsContainer.appendChild(emptyMessage);
+      return;
+    }
+    
+    // Group by date
+    const groupedHistory = groupHistoryByDate(history);
+    
+    // Add each group
+    Object.keys(groupedHistory).forEach(date => {
+      // Add date header
+      const dateHeader = document.createElement('div');
+      dateHeader.className = 'history-date-header';
+      dateHeader.textContent = date;
+      historyItemsContainer.appendChild(dateHeader);
+      
+      // Add items for this date
+      groupedHistory[date].forEach(item => {
+        const historyElement = createHistoryElement(item);
+        historyItemsContainer.appendChild(historyElement);
+      });
+    });
+  }
+  
+  // Group history items by date
+  function groupHistoryByDate(historyItems) {
+    const grouped = {};
+    
+    historyItems.forEach(item => {
+      const date = new Date(item.timestamp);
+      const dateString = date.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+      
+      if (!grouped[dateString]) {
+        grouped[dateString] = [];
+      }
+      
+      grouped[dateString].push(item);
+    });
+    
+    return grouped;
+  }
+  
+  // Create a history item element
+  function createHistoryElement(historyItem) {
+    const element = document.createElement('div');
+    element.className = 'history-item';
+    element.setAttribute('data-history-id', historyItem.id);
+    
+    // Favicon
+    const favicon = document.createElement('img');
+    favicon.className = 'history-favicon';
+    favicon.src = historyItem.favicon || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%236B7280" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>';
+    favicon.onerror = () => {
+      favicon.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%236B7280" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>';
+    };
+    
+    // Details container
+    const details = document.createElement('div');
+    details.className = 'history-details';
+    
+    // Title
+    const title = document.createElement('div');
+    title.className = 'history-title';
+    title.textContent = historyItem.title;
+    
+    // URL
+    const url = document.createElement('div');
+    url.className = 'history-url';
+    url.textContent = historyItem.url;
+    
+    details.appendChild(title);
+    details.appendChild(url);
+    
+    // Time
+    const time = document.createElement('div');
+    time.className = 'history-time';
+    time.textContent = new Date(historyItem.timestamp).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+    
+    // Delete button
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'history-delete';
+    deleteBtn.innerHTML = '<span class="material-icons">close</span>';
+    deleteBtn.title = 'Remove from history';
+    deleteBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      deleteHistoryItem(historyItem.id);
+    });
+    
+    // Click to navigate
+    element.addEventListener('click', () => {
+      if (activeTabId) {
+        window.browserAPI.navigateTo(activeTabId, historyItem.url);
+      } else {
+        window.browserAPI.createTab(historyItem.url);
+      }
+      closeHistory();
+    });
+    
+    // Append all elements
+    element.appendChild(favicon);
+    element.appendChild(details);
+    element.appendChild(time);
+    element.appendChild(deleteBtn);
+    
+    return element;
+  }
+  
+  // Delete a history item
+  async function deleteHistoryItem(id) {
+    try {
+      await window.browserAPI.deleteHistoryItem(id);
+      history = history.filter(item => item.id !== id);
+      renderHistory();
+      showNotification('History item removed');
+    } catch (error) {
+      console.error('Failed to delete history item:', error);
+      showNotification('Failed to delete history item');
+    }
+  }
 
   // Open settings panel
   function openSettings() {

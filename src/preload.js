@@ -14,6 +14,21 @@ contextBridge.exposeInMainWorld('browserAPI', {
   // UI actions
   toggleSidebar: () => ipcRenderer.send('toggle-sidebar'),
   toggleHideUI: () => ipcRenderer.send('toggle-hide-ui'),
+  toggleBookmarksBar: () => ipcRenderer.send('toggle-bookmarks-bar'),
+  
+  // Tab pins
+  pinTab: (tabId) => ipcRenderer.invoke('pin-tab', tabId),
+  unpinTab: (tabId) => ipcRenderer.invoke('unpin-tab', tabId),
+  
+  // History operations
+  getHistory: () => ipcRenderer.invoke('get-history'),
+  clearHistory: () => ipcRenderer.invoke('clear-history'),
+  deleteHistoryItem: (id) => ipcRenderer.invoke('delete-history-item', id),
+  
+  // Bookmark operations
+  getBookmarks: () => ipcRenderer.invoke('get-bookmarks'),
+  addBookmark: (bookmark) => ipcRenderer.invoke('add-bookmark', bookmark),
+  deleteBookmark: (id) => ipcRenderer.invoke('delete-bookmark', id),
   
   // Settings
   getSettings: () => ipcRenderer.invoke('get-settings'),
@@ -26,6 +41,7 @@ contextBridge.exposeInMainWorld('browserAPI', {
   onTabActivated: (callback) => ipcRenderer.on('tab-activated', callback),
   onTabUpdated: (callback) => ipcRenderer.on('tab-updated', callback),
   onSidebarToggled: (callback) => ipcRenderer.on('sidebar-toggled', callback),
+  onBookmarksBarToggled: (callback) => ipcRenderer.on('bookmarks-bar-toggled', callback),
   onUIVisibilityChanged: (callback) => ipcRenderer.on('ui-visibility-changed', callback),
   onShowNotification: (callback) => ipcRenderer.on('show-notification', callback),
   
