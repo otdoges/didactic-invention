@@ -2,8 +2,7 @@ const { app, BrowserWindow, BrowserView, ipcMain, clipboard, globalShortcut, Men
 const path = require('node:path');
 const electronLocalshortcut = require('electron-localshortcut');
 const Store = require('electron-store');
-const { ElectronBlocker } = require('@cliqz/adblocker-electron');
-const nodeFetch = require('node-fetch');
+// We'll use a simplified adblock implementation instead of @cliqz/adblocker-electron
 
 
 const fs = require('fs-extra');
@@ -626,27 +625,43 @@ function setupShortcuts() {
   });
 }
 
-// Setup ad blocker using Cliqz's implementation
+// Setup a simplified ad blocker
 async function setupAdBlocker() {
   try {
-    // Initialize the adblock engine using Cliqz instead of Brave's implementation
-    adBlocker = await ElectronBlocker.fromPrebuiltAdsAndTracking(nodeFetch);
+    // Common ad and tracking domains to block
+    const blockList = [
+      'ads', 'ad.', 'analytics', 'tracker', 'pixel', 'banner', 'popup',
+      'doubleclick.net', 'googlesyndication', 'googleadservices',
+      'google-analytics', 'facebook.com/tr', 'facebook.net', 'moatads',
+      'adnxs', 'adsrvr', 'serving-sys', 'taboola', 'outbrain'
+    ];
     
-    // Enable the blocker in the session
-    adBlocker.enableBlockingInSession(session.defaultSession);
-    
-    // Setup request monitoring to count blocked ads and trackers
-    adBlocker.on('request-blocked', ({ url }) => {
-      adBlockStats.adsBlocked++;
-      if (url.includes('track') || url.includes('analytics') || url.includes('beacon')) {
-        adBlockStats.trackersBlocked++;
+    // Setup request monitoring to count and block ads and trackers
+    session.defaultSession.webRequest.onBeforeRequest(
+      { urls: ['*://*/*'] },
+      (details, callback) => {
+        const url = details.url.toLowerCase();
+        let shouldBlock = false;
+        
+        for (const blockedTerm of blockList) {
+          if (url.includes(blockedTerm)) {
+            shouldBlock = true;
+            adBlockStats.adsBlocked++;
+            if (url.includes('track') || url.includes('analytics') || url.includes('beacon')) {
+              adBlockStats.trackersBlocked++;
+            }
+            // Update stats in store
+            statsStore.set('adsBlocked', statsStore.get('adsBlocked') + 1);
+            break;
+          }
+        }
+        
+        callback({ cancel: shouldBlock });
       }
-      // Update stats in store
-      statsStore.set('adsBlocked', statsStore.get('adsBlocked') + 1);
-    });
+    );
     
-    console.log('Ad blocker initialized successfully');
-    return adBlocker;
+    console.log('Simple ad blocker initialized successfully');
+    return true;
   } catch (error) {
     console.error('Failed to set up ad blocker:', error);
     return null;
@@ -660,11 +675,10 @@ async function setupExtensions() {
   return;
 }
 
-// Load uBlock Origin extension (simplified version using our ad blocker)
+// Load our simplified ad blocker
 async function loadUblockOriginExtension() {
   try {
-    console.log('Setting up ad blocker as uBlock Origin replacement');
-    // We'll use our implementation of adBlocker instead of uBlock Origin
+    console.log('Setting up simplified ad blocker');
     return await setupAdBlocker();
   } catch (error) {
     console.error('Failed to load ad blocker:', error);
@@ -903,10 +917,8 @@ ipcMain.handle('update-setting', (event, { key, value }) => {
   
   // Handle special settings that need immediate action
   if (key === 'enableAdBlocker' && value === false) {
-    // Disable ad blocker (unload extension logic needed)
-    if (adBlocker) {
-      adBlocker.disableBlockingInSession(session.defaultSession);
-    }
+    // Disable ad blocker
+    session.defaultSession.webRequest.onBeforeRequest(null);
   } else if (key === 'enableAdBlocker' && value === true) {
     // Re-enable ad blocker
     loadUblockOriginExtension();
