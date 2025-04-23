@@ -415,6 +415,33 @@
         </div>
       </div>
 
+      <!-- Downloads panel -->
+      <div id="downloads-panel" class="panel hidden">
+        <div class="panel-header">
+          <h2>Downloads</h2>
+          <button id="close-downloads-btn" class="close-btn">
+            <span class="material-icons">close</span>
+          </button>
+        </div>
+        <div class="panel-actions">
+          <button id="clear-downloads-btn" class="panel-action-btn">
+            <span class="material-icons">delete</span>
+            Clear Downloads
+          </button>
+          <button id="open-downloads-folder-btn" class="panel-action-btn">
+            <span class="material-icons">folder_open</span>
+            Open Downloads Folder
+          </button>
+        </div>
+        <div id="downloads-items-container" class="panel-content">
+          <!-- Download items will be dynamically added here -->
+          <div class="empty-state" id="empty-downloads">
+            <span class="material-icons empty-icon">cloud_download</span>
+            <p>No downloads yet</p>
+          </div>
+        </div>
+      </div>
+
       <!-- Tab context menu -->
       <div id="tab-context-menu" class="context-menu">
         <div class="menu-item" id="menu-new-tab">

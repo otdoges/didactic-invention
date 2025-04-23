@@ -72,6 +72,23 @@ body {
   margin: 0;
   padding: 0;
   transition: background-color 0.5s ease, color 0.5s ease;
+  /* Default to dark theme */
+  --bg-primary: #202124;
+  --bg-secondary: #292a2d;
+  --bg-tertiary: #3c4043;
+  --text-primary: #e8eaed;
+  --text-secondary: #9aa0a6;
+  --border-color: #5f6368;
+  --accent-color: #8ab4f8;
+  --accent-color-dark: #669df6;
+  --sidebar-bg: #202124;
+  --sidebar-text: #e8eaed;
+  --tab-bg: #292a2d;
+  --tab-hover: #3c4043;
+  --shadow-color: rgba(0, 0, 0, 0.3);
+  --primary-color: #8ab4f8;
+  --loading-color: #8ab4f8;
+  --adblock-color: #ff7043;
 }
 
 #browser {
@@ -159,6 +176,8 @@ body {
   position: relative;
   scrollbar-width: thin;
   scrollbar-color: var(--tab-hover) var(--sidebar-bg);
+  background-color: #202124;
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2);
 }
 
 #sidebar::-webkit-scrollbar {
@@ -191,17 +210,16 @@ body {
 }
 
 .workspace-section {
-  padding: 8px;
-  border-radius: 8px;
+  padding: 5px 15px;
   cursor: pointer;
+  border-radius: 8px;
+  margin-bottom: 5px;
   transition: background-color 0.2s ease;
+  background-color: #333;
+  margin: 5px;
 }
 
 .workspace-section:hover {
-  background-color: var(--tab-hover);
-}
-
-.workspace-section.zen-section {
   background-color: var(--tab-hover);
 }
 
@@ -495,12 +513,14 @@ body {
   flex: 1;
   display: flex;
   align-items: center;
-  background-color: var(--bg-tertiary);
+  background-color: var(--bg-secondary);
   border-radius: 24px;
   padding: 0 10px;
-  height: 40px;
-  transition: box-shadow 0.2s, background-color 0.2s;
-  margin: 0 8px;
+  margin: 0 10px;
+  height: 44px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  transition: box-shadow 0.2s ease, background-color 0.3s ease;
+  background-color: #333;
 }
 
 #address-bar:focus-within {
@@ -509,8 +529,8 @@ body {
 }
 
 .url-icon {
-  color: var(--text-secondary);
-  margin-right: 4px;
+  color: #8ab4f8;
+  opacity: 0.8;
 }
 
 .address-actions {
@@ -525,7 +545,7 @@ body {
   border: none;
   background: transparent;
   margin: 0 10px;
-  color: #374151;
+  color: #e8eaed;
   font-size: var(--font-size-base);
   outline: none;
 }
