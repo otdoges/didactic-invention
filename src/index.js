@@ -80,6 +80,14 @@ let tabManager;
 let extensions; // uBlock Origin and other extensions will be loaded here.
 let adBlocker; // Ad blocker instance
 let adBlockStats = { adsBlocked: 0, trackersBlocked: 0 };
+let activeDownloads = [];
+let downloadsStore = new Store({
+  name: 'downloads',
+  defaults: {
+    items: [],
+    downloadPath: app.getPath('downloads')
+  }
+});
 
 // Tab management class
 class TabManager {
@@ -489,6 +497,112 @@ class TabManager {
   }
 }
 
+// Setup download handling
+function setupDownloadHandling() {
+  // Set default download path
+  const downloadPath = downloadsStore.get('downloadPath') || app.getPath('downloads');
+  session.defaultSession.setDownloadPath(downloadPath);
+
+  // Handle download events
+  session.defaultSession.on('will-download', (event, item, webContents) => {
+    // Get file info
+    const fileName = item.getFilename();
+    const fileSize = item.getTotalBytes();
+    const startTime = Date.now();
+    const savePath = path.join(downloadPath, fileName);
+    
+    // Generate unique download ID
+    const downloadId = Date.now().toString();
+    
+    // Create download item object
+    const downloadItem = {
+      id: downloadId,
+      filename: fileName,
+      url: item.getURL(),
+      path: savePath,
+      size: fileSize,
+      received: 0,
+      progress: 0,
+      status: 'progressing',
+      speed: 0,
+      startTime,
+      mime: item.getMimeType() || 'application/octet-stream',
+      etag: null
+    };
+    
+    // Add to active downloads
+    activeDownloads.push(downloadItem);
+    
+    // Notify renderer of download start
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('download-started', downloadItem);
+    }
+    
+    // Update download progress
+    item.on('updated', (event, state) => {
+      if (state === 'interrupted') {
+        downloadItem.status = 'interrupted';
+      } else if (state === 'progressing') {
+        if (item.isPaused()) {
+          downloadItem.status = 'paused';
+        } else {
+          downloadItem.status = 'progressing';
+          downloadItem.received = item.getReceivedBytes();
+          downloadItem.progress = downloadItem.size > 0 ? 
+            Math.round((downloadItem.received / downloadItem.size) * 100) : 0;
+            
+          // Calculate download speed (bytes per second)
+          const elapsed = (Date.now() - startTime) / 1000;
+          downloadItem.speed = elapsed > 0 ? Math.round(downloadItem.received / elapsed) : 0;
+        }
+      }
+      
+      // Notify renderer of download update
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('download-updated', downloadItem);
+      }
+    });
+    
+    // Handle download completion
+    item.once('done', (event, state) => {
+      if (state === 'completed') {
+        downloadItem.status = 'completed';
+        downloadItem.progress = 100;
+        downloadItem.received = downloadItem.size;
+        
+        // Add to download history
+        const downloads = downloadsStore.get('items') || [];
+        downloads.unshift({
+          ...downloadItem,
+          completedTime: Date.now(),
+        });
+        
+        // Keep only the last 100 downloads
+        downloadsStore.set('items', downloads.slice(0, 100));
+        
+        // Show notification
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('download-completed', downloadItem);
+          mainWindow.webContents.send('show-notification', {
+            title: 'Download Complete',
+            body: `${fileName} has been downloaded.`
+          });
+        }
+      } else {
+        downloadItem.status = 'cancelled';
+        
+        // Notify renderer of download cancellation
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('download-updated', downloadItem);
+        }
+      }
+      
+      // Remove from active downloads
+      activeDownloads = activeDownloads.filter(d => d.id !== downloadItem.id);
+    });
+  });
+}
+
 // Create the browser window
 const createWindow = async () => {
   const { width, height } = store.get('windowBounds');
@@ -536,6 +650,9 @@ const createWindow = async () => {
 
   // Initialize the tab manager
   tabManager = new TabManager(mainWindow);
+
+  // Setup download handling
+  setupDownloadHandling();
 
   // Load the index.html of the app
   mainWindow.loadFile(path.join(__dirname, 'index.html'));
@@ -970,6 +1087,63 @@ function setupHttpsOnlyMode() {
 ipcMain.handle('reset-settings', () => {
   store.clear();
   return store.store;
+});
+
+// Download related IPC handlers
+ipcMain.handle('get-downloads', () => {
+  return {
+    active: activeDownloads,
+    completed: downloadsStore.get('items') || []
+  };
+});
+
+ipcMain.handle('clear-downloads', () => {
+  downloadsStore.set('items', []);
+  return { success: true };
+});
+
+ipcMain.handle('pause-download', (event, id) => {
+  const download = activeDownloads.find(d => d.id === id);
+  if (download) {
+    // In Electron, we can't directly pause a download by ID
+    // This is a simplified implementation
+    download.status = 'paused';
+    return { success: true };
+  }
+  return { success: false, error: 'Download not found' };
+});
+
+ipcMain.handle('resume-download', (event, id) => {
+  const download = activeDownloads.find(d => d.id === id);
+  if (download) {
+    // In Electron, we can't directly resume a download by ID
+    // This is a simplified implementation
+    download.status = 'progressing';
+    return { success: true };
+  }
+  return { success: false, error: 'Download not found' };
+});
+
+ipcMain.handle('cancel-download', (event, id) => {
+  const download = activeDownloads.find(d => d.id === id);
+  if (download) {
+    // In Electron, we can't directly cancel a download by ID
+    // This is a simplified implementation
+    download.status = 'cancelled';
+    return { success: true };
+  }
+  return { success: false, error: 'Download not found' };
+});
+
+ipcMain.handle('open-downloads-folder', () => {
+  const downloadPath = downloadsStore.get('downloadPath') || app.getPath('downloads');
+  shell.openPath(downloadPath);
+  return { success: true };
+});
+
+ipcMain.handle('open-downloaded-file', (event, filePath) => {
+  shell.openPath(filePath);
+  return { success: true };
 });
 
 

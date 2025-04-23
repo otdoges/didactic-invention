@@ -22,6 +22,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const notificationContainer = document.getElementById('notification-container');
   const loadingBar = document.getElementById('loading-bar');
   const themeSwitch = document.getElementById('theme-switch');
+  const downloadsBtn = document.getElementById('downloads-btn');
+  const downloadsPanel = document.getElementById('downloads-panel');
+  const closeDownloadsBtn = document.getElementById('close-downloads-btn');
+  const clearDownloadsBtn = document.getElementById('clear-downloads-btn');
+  const openDownloadsFolderBtn = document.getElementById('open-downloads-folder-btn');
+  const downloadsItemsContainer = document.getElementById('downloads-items-container');
   const loadingSpinnerTemplate = document.getElementById('loading-spinner-template');
   const mediaPlayerTemplate = document.getElementById('media-player-template');
   const bookmarkBarToggle = document.getElementById('bookmark-bar-toggle');
@@ -39,11 +45,14 @@ document.addEventListener('DOMContentLoaded', () => {
   let tabs = [];
   let bookmarks = [];
   let history = [];
+  let downloads = [];
+  let activeDownloads = [];
   let currentFavicon = null;
   let isNavbarHidden = false;
   let isFullscreen = false;
   let settingsVisible = false;
   let historyVisible = false;
+  let downloadsVisible = false;
   let isDarkMode = false;
   let loadingTimers = {};
   let mediaPlayers = [];
@@ -79,12 +88,46 @@ document.addEventListener('DOMContentLoaded', () => {
       console.error('Failed to get adblock stats:', error);
     }
     
+    // Load downloads
+    loadDownloads();
+    
     // Initial tabs refresh
     refreshTabs();
   }
 
   // Set up event listeners
   function setupEventListeners() {
+    // Set up downloads button
+    if (downloadsBtn) {
+      downloadsBtn.addEventListener('click', () => {
+        toggleDownloadsPanel();
+      });
+    }
+
+    // Close downloads button
+    if (closeDownloadsBtn) {
+      closeDownloadsBtn.addEventListener('click', () => {
+        toggleDownloadsPanel(false);
+      });
+    }
+
+    // Clear downloads button
+    if (clearDownloadsBtn) {
+      clearDownloadsBtn.addEventListener('click', async () => {
+        await window.browserAPI.clearDownloads();
+        downloads = [];
+        updateDownloadsList();
+        showNotification('Downloads cleared');
+      });
+    }
+
+    // Open downloads folder button
+    if (openDownloadsFolderBtn) {
+      openDownloadsFolderBtn.addEventListener('click', async () => {
+        await window.browserAPI.openDownloadsFolder();
+      });
+    }
+
     // New tab button
     const newTabBtn = document.getElementById('new-tab-btn');
     if (newTabBtn) {
@@ -843,6 +886,223 @@ document.addEventListener('DOMContentLoaded', () => {
         });
       });
     }
+  }
+
+  // Toggle downloads panel
+  function toggleDownloadsPanel(show) {
+    if (show === undefined) {
+      downloadsVisible = !downloadsVisible;
+    } else {
+      downloadsVisible = show;
+    }
+    
+    if (downloadsVisible) {
+      downloadsPanel.classList.remove('hidden');
+      // Hide other panels
+      if (settingsVisible) toggleSettingsPanel(false);
+      if (historyVisible) toggleHistoryPanel(false);
+    } else {
+      downloadsPanel.classList.add('hidden');
+    }
+  }
+  
+  // Load downloads from main process
+  async function loadDownloads() {
+    try {
+      const downloadData = await window.browserAPI.getDownloads();
+      downloads = downloadData.completed || [];
+      activeDownloads = downloadData.active || [];
+      updateDownloadsList();
+    } catch (error) {
+      console.error('Failed to load downloads:', error);
+    }
+  }
+  
+  // Update downloads list in UI
+  function updateDownloadsList() {
+    if (!downloadsItemsContainer) return;
+    
+    // Clear current list
+    downloadsItemsContainer.innerHTML = '';
+    
+    // Show empty state if no downloads
+    if (activeDownloads.length === 0 && downloads.length === 0) {
+      const emptyState = document.createElement('div');
+      emptyState.className = 'empty-state';
+      emptyState.innerHTML = `
+        <span class="material-icons empty-icon">cloud_download</span>
+        <p>No downloads yet</p>
+      `;
+      downloadsItemsContainer.appendChild(emptyState);
+      return;
+    }
+    
+    // Active downloads section
+    if (activeDownloads.length > 0) {
+      const activeSection = document.createElement('div');
+      activeSection.className = 'downloads-section';
+      activeSection.innerHTML = '<h3>Active Downloads</h3>';
+      downloadsItemsContainer.appendChild(activeSection);
+      
+      activeDownloads.forEach(download => {
+        const downloadItem = createDownloadItem(download, true);
+        downloadsItemsContainer.appendChild(downloadItem);
+      });
+    }
+    
+    // Completed downloads section
+    if (downloads.length > 0) {
+      const completedSection = document.createElement('div');
+      completedSection.className = 'downloads-section';
+      completedSection.innerHTML = '<h3>Completed Downloads</h3>';
+      downloadsItemsContainer.appendChild(completedSection);
+      
+      // Show only the most recent 20 downloads
+      const recentDownloads = downloads.slice(0, 20);
+      recentDownloads.forEach(download => {
+        const downloadItem = createDownloadItem(download, false);
+        downloadsItemsContainer.appendChild(downloadItem);
+      });
+    }
+  }
+  
+  // Create a download item element
+  function createDownloadItem(download, isActive) {
+    const item = document.createElement('div');
+    item.className = 'download-item';
+    item.dataset.id = download.id;
+    
+    // Format file size
+    const sizeText = formatFileSize(download.size);
+    
+    // Format speed if active
+    let speedText = '';
+    if (isActive && download.status === 'progressing') {
+      speedText = formatFileSize(download.speed) + '/s';
+    }
+    
+    // Create status indicator
+    let statusIcon = 'cloud_download';
+    let statusClass = 'status-in-progress';
+    
+    if (download.status === 'completed') {
+      statusIcon = 'check_circle';
+      statusClass = 'status-complete';
+    } else if (download.status === 'cancelled' || download.status === 'interrupted') {
+      statusIcon = 'error';
+      statusClass = 'status-error';
+    } else if (download.status === 'paused') {
+      statusIcon = 'pause';
+      statusClass = 'status-paused';
+    }
+    
+    // Determine file type icon
+    let fileIcon = 'insert_drive_file';
+    const extension = download.filename.split('.').pop().toLowerCase();
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(extension)) {
+      fileIcon = 'image';
+    } else if (['mp4', 'webm', 'mov', 'avi'].includes(extension)) {
+      fileIcon = 'movie';
+    } else if (['mp3', 'wav', 'ogg', 'flac'].includes(extension)) {
+      fileIcon = 'music_note';
+    } else if (['pdf'].includes(extension)) {
+      fileIcon = 'picture_as_pdf';
+    } else if (['doc', 'docx', 'txt', 'rtf'].includes(extension)) {
+      fileIcon = 'description';
+    } else if (['xls', 'xlsx', 'csv'].includes(extension)) {
+      fileIcon = 'table_chart';
+    } else if (['zip', 'rar', '7z', 'tar', 'gz'].includes(extension)) {
+      fileIcon = 'archive';
+    }
+    
+    // Create layout
+    const html = `
+      <div class="download-icon">
+        <span class="material-icons file-icon">${fileIcon}</span>
+      </div>
+      <div class="download-details">
+        <div class="download-name">${download.filename}</div>
+        <div class="download-info">
+          ${sizeText} ${speedText ? `• ${speedText}` : ''}
+        </div>
+        ${isActive && download.status === 'progressing' ? 
+          `<div class="download-progress">
+            <div class="download-progress-bar" style="width: ${download.progress}%"></div>
+          </div>` : ''
+        }
+      </div>
+      <div class="download-status ${statusClass}">
+        <span class="material-icons status-icon">${statusIcon}</span>
+      </div>
+      ${isActive ? 
+        `<div class="download-actions">
+          ${download.status === 'progressing' ? 
+            `<button class="download-action-btn pause-download" title="Pause download">
+              <span class="material-icons">pause</span>
+            </button>` : 
+            download.status === 'paused' ? 
+            `<button class="download-action-btn resume-download" title="Resume download">
+              <span class="material-icons">play_arrow</span>
+            </button>` : ''
+          }
+          <button class="download-action-btn cancel-download" title="Cancel download">
+            <span class="material-icons">close</span>
+          </button>
+        </div>` : 
+        `<div class="download-actions">
+          <button class="download-action-btn open-download" title="Open file">
+            <span class="material-icons">open_in_new</span>
+          </button>
+        </div>`
+      }
+    `;
+    
+    item.innerHTML = html;
+    
+    // Add event listeners for download actions
+    if (isActive) {
+      const pauseBtn = item.querySelector('.pause-download');
+      const resumeBtn = item.querySelector('.resume-download');
+      const cancelBtn = item.querySelector('.cancel-download');
+      
+      if (pauseBtn) {
+        pauseBtn.addEventListener('click', () => {
+          window.browserAPI.pauseDownload(download.id);
+        });
+      }
+      
+      if (resumeBtn) {
+        resumeBtn.addEventListener('click', () => {
+          window.browserAPI.resumeDownload(download.id);
+        });
+      }
+      
+      if (cancelBtn) {
+        cancelBtn.addEventListener('click', () => {
+          window.browserAPI.cancelDownload(download.id);
+        });
+      }
+    } else {
+      const openBtn = item.querySelector('.open-download');
+      if (openBtn) {
+        openBtn.addEventListener('click', () => {
+          window.browserAPI.openDownloadedFile(download.path);
+        });
+      }
+    }
+    
+    return item;
+  }
+  
+  // Format file size in human-readable format
+  function formatFileSize(bytes) {
+    if (bytes === 0) return '0 B';
+    if (!bytes) return 'Unknown size';
+    
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    
+    return (bytes / Math.pow(1024, i)).toFixed(i === 0 ? 0 : 1) + ' ' + sizes[i];
   }
 
   // Show a notification
