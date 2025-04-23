@@ -36,6 +36,15 @@ contextBridge.exposeInMainWorld('browserAPI', {
   resetSettings: () => ipcRenderer.invoke('reset-settings'),
   toggleTheme: () => ipcRenderer.invoke('toggle-theme'),
   
+  // Downloads
+  getDownloads: () => ipcRenderer.invoke('get-downloads'),
+  clearDownloads: () => ipcRenderer.invoke('clear-downloads'),
+  pauseDownload: (id) => ipcRenderer.invoke('pause-download', id),
+  resumeDownload: (id) => ipcRenderer.invoke('resume-download', id),
+  cancelDownload: (id) => ipcRenderer.invoke('cancel-download', id),
+  openDownloadsFolder: () => ipcRenderer.invoke('open-downloads-folder'),
+  openDownloadedFile: (path) => ipcRenderer.invoke('open-downloaded-file', path),
+  
   // Event listeners
   onAdBlockStatsUpdated: (callback) => {
     ipcRenderer.on('adblock-stats-updated', (event, stats) => callback(stats));
@@ -62,6 +71,9 @@ contextBridge.exposeInMainWorld('browserAPI', {
     ipcRenderer.on('ui-visibility-changed', (event, data) => callback(data));
   },
   onShowNotification: (callback) => ipcRenderer.on('show-notification', callback),
+  onDownloadStarted: (callback) => ipcRenderer.on('download-started', (event, item) => callback(item)),
+  onDownloadUpdated: (callback) => ipcRenderer.on('download-updated', (event, item) => callback(item)),
+  onDownloadCompleted: (callback) => ipcRenderer.on('download-completed', (event, item) => callback(item)),
   
   // Remove event listeners
   removeAllListeners: (channel) => {
