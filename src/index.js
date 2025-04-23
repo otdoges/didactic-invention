@@ -3,7 +3,7 @@ const path = require('node:path');
 const electronLocalshortcut = require('electron-localshortcut');
 const Store = require('electron-store');
 const { ElectronBlocker } = require('@cliqz/adblocker-electron');
-const fetch = require('node-fetch');
+const nodeFetch = require('node-fetch');
 
 
 const fs = require('fs-extra');
@@ -630,7 +630,7 @@ function setupShortcuts() {
 async function setupAdBlocker() {
   try {
     // Initialize the adblock engine using Cliqz instead of Brave's implementation
-    adBlocker = await ElectronBlocker.fromPrebuiltAdsAndTracking(fetch);
+    adBlocker = await ElectronBlocker.fromPrebuiltAdsAndTracking(nodeFetch);
     
     // Enable the blocker in the session
     adBlocker.enableBlockingInSession(session.defaultSession);
