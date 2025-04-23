@@ -1,4 +1,4 @@
-// Zen Browser Renderer Process - Main UI handling
+// Nebula Browser Renderer Process - Main UI handling
 document.addEventListener('DOMContentLoaded', () => {
   // Document elements
   const browser = document.getElementById('browser');
@@ -286,6 +286,32 @@ document.addEventListener('DOMContentLoaded', () => {
         closeTab(menuCloseTab.dataset.tabId);
         tabContextMenu.style.display = 'none';
       });
+    }
+
+    // Incognito button
+    if (incognitoButton) {
+      incognitoButton.addEventListener('click', toggleIncognitoMode);
+    }
+
+    // Screenshot button
+    if (screenshotButton) {
+      screenshotButton.addEventListener('click', takeScreenshot);
+    }
+
+    // Bookmark button in bookmarks panel
+    const addBookmarkBtn = document.getElementById('add-bookmark');
+    if (addBookmarkBtn) {
+      addBookmarkBtn.addEventListener('click', addBookmark);
+    }
+
+    // Night mode button
+    if (nightModeButton) {
+      nightModeButton.addEventListener('click', toggleNightMode);
+    }
+
+    // Bookmark button
+    if (bookmarkButton) {
+      bookmarkButton.addEventListener('click', toggleBookmarksPanel);
     }
   }
 
