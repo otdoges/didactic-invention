@@ -35,10 +35,10 @@
             </div>
           </div>
         </div>
-        <button id="new-tab-btn" class="new-tab-button" title="New Tab">
-          <span class="material-icons">add</span>
+        <div id="new-tab-btn" class="new-tab-button" title="New Tab">
+          <img src="assets/icons/add.svg" class="icon" alt="Add tab"/>
           <span>New Tab</span>
-        </button>
+        </div>
         <div id="tabs">
           <!-- Tabs will be dynamically added here -->
         </div>
@@ -47,18 +47,18 @@
             <span class="material-icons">block</span>
             <span id="ads-blocked-count">0</span>
           </div>
-          <button id="history-btn" class="sidebar-btn" title="History">
-            <span class="material-icons">history</span>
-          </button>
-          <button id="devtools-btn" class="sidebar-btn" title="DevTools">
-            <span class="material-icons">code</span>
-          </button>
-          <button id="extensions-btn" class="sidebar-btn" title="Extensions">
-            <span class="material-icons">extension</span>
-          </button>
-          <button id="settings-btn" class="sidebar-btn" title="Settings">
-            <span class="material-icons">settings</span>
-          </button>
+          <div id="history-btn" class="sidebar-btn" title="History">
+            <img src="assets/icons/history.svg" class="icon" alt="History"/>
+          </div>
+          <div id="devtools-btn" class="sidebar-btn" title="DevTools">
+            <img src="assets/icons/code.svg" class="icon" alt="DevTools"/>
+          </div>
+          <div id="downloads-btn" class="sidebar-btn" title="Downloads">
+            <img src="assets/icons/download.svg" class="icon" alt="Downloads"/>
+          </div>
+          <div id="settings-btn" class="sidebar-btn" title="Settings">
+            <img src="assets/icons/settings.svg" class="icon" alt="Settings"/>
+          </div>
         </div>
       </div>
 
@@ -67,33 +67,30 @@
         <!-- Navigation bar -->
         <div id="navigation-bar" class="visible">
           <div class="nav-controls">
-            <button id="back-btn" title="Back">
-              <span class="material-icons">arrow_back</span>
-            </button>
-            <button id="forward-btn" title="Forward">
-              <span class="material-icons">arrow_forward</span>
-            </button>
-            <button id="reload-btn" title="Reload">
-              <span class="material-icons">refresh</span>
-            </button>
+            <div id="back-btn" class="nav-icon" title="Back">
+              <img src="assets/icons/back.svg" class="icon" alt="Back"/>
+            </div>
+            <div id="forward-btn" class="nav-icon" title="Forward">
+              <img src="assets/icons/forward.svg" class="icon" alt="Forward"/>
+            </div>
+            <div id="reload-btn" class="nav-icon" title="Reload">
+              <img src="assets/icons/refresh.svg" class="icon" alt="Reload"/>
+            </div>
           </div>
           
           <div id="address-bar">
-            <span class="material-icons url-icon">public</span>
+            <img src="assets/icons/search.svg" class="url-icon" alt="Search"/>
             <input type="text" id="address-input" placeholder="Search with Google or enter address" />
             <div class="address-actions">
-              <button id="bookmark-btn" title="Bookmark this page">
-                <span class="material-icons">bookmark_border</span>
-              </button>
-              <button id="reader-mode-btn" title="Reader mode">
-                <span class="material-icons">chrome_reader_mode</span>
-              </button>
-              <button id="security-info-btn" title="Security information">
-                <span class="material-icons">security</span>
-              </button>
-              <button id="downloads-btn" title="Downloads">
-                <span class="material-icons">download</span>
-              </button>
+              <div id="bookmark-btn" class="address-action" title="Bookmark this page">
+                <img src="assets/icons/bookmark.svg" class="icon" alt="Bookmark"/>
+              </div>
+              <div id="reader-mode-btn" class="address-action" title="Reader mode">
+                <img src="assets/icons/reader.svg" class="icon" alt="Reader mode"/>
+              </div>
+              <div id="security-info-btn" class="address-action" title="Security information">
+                <img src="assets/icons/security.svg" class="icon" alt="Security"/>
+              </div>
             </div>
           </div>
         </div>
