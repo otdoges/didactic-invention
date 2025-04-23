@@ -1046,12 +1046,12 @@ document.addEventListener('DOMContentLoaded', () => {
             </button>` : ''
           }
           <button class="download-action-btn cancel-download" title="Cancel download">
-            <span class="material-icons">close</span>
+            <img src="assets/icons/close.svg" class="icon small-icon" alt="Cancel">
           </button>
         </div>` : 
         `<div class="download-actions">
           <button class="download-action-btn open-download" title="Open file">
-            <span class="material-icons">open_in_new</span>
+            <img src="assets/icons/open_in_new.svg" class="icon small-icon" alt="Open">
           </button>
         </div>`
       }
@@ -1092,6 +1092,79 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     return item;
+  }
+  
+  // Refresh the tabs list from main process
+  async function refreshTabs() {
+    const allTabs = window.browserAPI.getTabs();
+    tabs = allTabs;
+    
+    tabsContainer.innerHTML = '';
+    
+    // Find active tab
+    const activeTab = tabs.find(tab => tab.isActive);
+    if (activeTab) {
+      activeTabId = activeTab.id;
+    }
+    
+    // Create tab elements
+    tabs.forEach(tab => {
+      const tabElement = document.createElement('div');
+      tabElement.className = 'tab-item';
+      tabElement.dataset.id = tab.id;
+      
+      if (tab.isActive) {
+        tabElement.classList.add('active');
+      }
+      
+      // Determine icon based on URL or use favicon if available
+      let iconHtml = '';
+      if (tab.favicon) {
+        iconHtml = `<img src="${tab.favicon}" class="tab-icon" alt="">`;
+      } else {
+        // Determine icon based on URL
+        let iconPath = 'assets/icons/home.svg';
+        
+        if (tab.url.includes('google.com')) {
+          iconPath = 'assets/icons/search.svg';
+        } else if (tab.url.includes('github.com')) {
+          iconPath = 'assets/icons/code.svg';
+        } else if (tab.url.includes('youtube.com')) {
+          iconPath = 'assets/icons/video.svg';
+        } else if (tab.url.startsWith('file://')) {
+          iconPath = 'assets/icons/home.svg';
+        }
+        
+        iconHtml = `<img src="${iconPath}" class="tab-icon" alt="">`;
+      }
+      
+      tabElement.innerHTML = `
+        <div class="tab-favicon">
+          ${iconHtml}
+        </div>
+        <div class="tab-title">${tab.title || 'New Tab'}</div>
+        <div class="tab-close" title="Close tab">
+          <img src="assets/icons/close.svg" class="icon small-icon" alt="Close">
+        </div>
+      `;
+      
+      // Add event listeners to the tab
+      tabElement.addEventListener('click', (e) => {
+        if (!e.target.closest('.tab-close')) {
+          window.browserAPI.switchTab(tab.id);
+        }
+      });
+      
+      const closeBtn = tabElement.querySelector('.tab-close');
+      if (closeBtn) {
+        closeBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          window.browserAPI.closeTab(tab.id);
+        });
+      }
+      
+      tabsContainer.appendChild(tabElement);
+    });
   }
   
   // Format file size in human-readable format
