@@ -39,6 +39,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const toggleAdBlockerCheckbox = document.getElementById('toggle-ad-blocker');
   const alwaysShowTabsCheckbox = document.getElementById('always-show-tabs');
   const settingsNavItems = document.querySelectorAll('.settings-nav-item');
+  const incognitoButton = document.getElementById('incognito-btn');
+  const nightModeButton = document.getElementById('night-mode-btn');
+  const translateButton = document.getElementById('translate-btn');
+  const screenshotButton = document.getElementById('screenshot-btn');
+  const bookmarkButton = document.getElementById('bookmark-btn');
 
   // State variables
   let activeTabId = null;
@@ -56,7 +61,9 @@ document.addEventListener('DOMContentLoaded', () => {
   let isDarkMode = false;
   let loadingTimers = {};
   let mediaPlayers = [];
-  
+  let isIncognitoMode = false;
+  let isNightMode = false;
+
   // Check system preference for dark mode
   const prefersDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
 

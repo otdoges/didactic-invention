@@ -12,19 +12,6 @@
   --text-primary: #333;
   --text-secondary: #6b7280;
   --border-color: #e5e7eb;
-  --accent-color: #60a5fa;
-  --accent-color-dark: #3b82f6;
-  --sidebar-bg: #202124;
-  --sidebar-text: #f1f3f4;
-  --tab-bg: #292a2d;
-  --tab-hover: #3c4043;
-  --shadow-color: rgba(0, 0, 0, 0.1);
-  --success-color: #10b981;
-  --error-color: #ef4444;
-  --warning-color: #f59e0b;
-  --primary-color: #8ab4f8;
-  --loading-color: #8ab4f8;
-  --adblock-color: #ff8a65;
   
   /* Layout variables */
   --sidebar-width: 250px;
@@ -332,6 +319,7 @@ body {
   overflow: hidden;
   position: relative;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  z-index: 1001; /* Even higher priority for tab items */
 }
 
 .tab-item:hover {

@@ -1,6 +1,6 @@
 {
-  "name": "zen-browser",
-  "productName": "Zen Browser",
+  "name": "nebula-browser",
+  "productName": "Nebula Browser",
   "version": "1.0.0",
   "description": "Modern Electron browser with vertical tabs and advanced privacy features",
   "main": "src/index.js",

@@ -2,8 +2,11 @@
 <html>
   <head>
     <meta charset="UTF-8" />
-    <title>Nebula Browser</title>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline';" />
+    <meta http-equiv="X-Content-Security-Policy" content="default-src 'self'; script-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline';" />
     <link rel="stylesheet" href="index.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <title>Nebula Browser</title>
     <!-- Material Icons for a modern UI -->
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
@@ -47,18 +50,27 @@
             <img src="assets/icons/block.svg" class="icon" alt="Block"/>
             <span id="ads-blocked-count">0</span>
           </div>
-          <div id="history-btn" class="sidebar-btn" title="History">
+          <button id="bookmark-btn" class="sidebar-btn" title="Bookmarks">
+            <img src="assets/icons/bookmark.svg" class="icon" alt="Bookmark"/>
+          </button>
+          <button id="history-btn" class="sidebar-btn" title="History">
             <img src="assets/icons/history.svg" class="icon" alt="History"/>
-          </div>
-          <div id="devtools-btn" class="sidebar-btn" title="DevTools">
-            <img src="assets/icons/code.svg" class="icon" alt="DevTools"/>
-          </div>
-          <div id="downloads-btn" class="sidebar-btn" title="Downloads">
-            <img src="assets/icons/download.svg" class="icon" alt="Downloads"/>
-          </div>
-          <div id="settings-btn" class="sidebar-btn" title="Settings">
+          </button>
+          <button id="incognito-btn" class="sidebar-btn" title="Incognito Mode">
+            <img src="assets/icons/incognito.svg" class="icon" alt="Incognito"/>
+          </button>
+          <button id="night-mode-btn" class="sidebar-btn" title="Night Mode">
+            <img src="assets/icons/night_mode.svg" class="icon" alt="Night Mode"/>
+          </button>
+          <button id="translate-btn" class="sidebar-btn" title="Translate Page">
+            <img src="assets/icons/translate.svg" class="icon" alt="Translate"/>
+          </button>
+          <button id="screenshot-btn" class="sidebar-btn" title="Take Screenshot">
+            <img src="assets/icons/screenshot.svg" class="icon" alt="Screenshot"/>
+          </button>
+          <button id="settings-btn" class="sidebar-btn" title="Settings">
             <img src="assets/icons/settings.svg" class="icon" alt="Settings"/>
-          </div>
+          </button>
         </div>
       </div>
 
@@ -394,21 +406,34 @@
       <div id="notification-container"></div>
       
       <!-- History panel -->
-      <div id="history-panel" class="panel hidden">
+      <div class="panel" id="history-panel">
         <div class="panel-header">
-          <h2>History</h2>
-          <button id="close-history-btn" class="close-btn">
+          <h3>History</h3>
+          <button class="close-panel">
             <span class="material-icons">close</span>
           </button>
         </div>
-        <div class="panel-actions">
-          <button id="clear-history-btn" class="panel-action-btn">
-            <span class="material-icons">delete</span>
-            Clear History
+        <div class="panel-content">
+          <div id="history-items"></div>
+        </div>
+      </div>
+
+      <!-- Bookmarks panel -->
+      <div class="panel" id="bookmarks-panel">
+        <div class="panel-header">
+          <h3>Bookmarks</h3>
+          <button class="close-panel">
+            <span class="material-icons">close</span>
           </button>
         </div>
-        <div id="history-items-container" class="panel-content">
-          <!-- History items will be dynamically added here -->
+        <div class="panel-content">
+          <div id="bookmarks-items"></div>
+          <div class="panel-actions">
+            <button id="add-bookmark" class="action-button">
+              <img src="assets/icons/add.svg" class="icon small-icon" alt="Add"/>
+              <span>Add Current Page</span>
+            </button>
+          </div>
         </div>
       </div>
 
