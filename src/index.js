@@ -3,7 +3,9 @@ const path = require('node:path');
 const electronLocalshortcut = require('electron-localshortcut');
 const Store = require('electron-store');
 const { ElectronBlocker } = require('@cliqz/adblocker-electron');
-const fetch = require('cross-fetch');
+const fetch = require('node-fetch');
+
+
 const fs = require('fs-extra');
 const url = require('url');
 const axios = require('axios');
@@ -76,13 +78,9 @@ const bookmarksStore = new Store({
 // Global variables
 let mainWindow;
 let tabManager;
-let adBlocker;
-let extensions;
-let adBlockStats = {
-  adsBlocked: statsStore.get('adsBlocked') || 0,
-  trackersBlocked: statsStore.get('trackersBlocked') || 0,
-  dataSaved: statsStore.get('dataSaved') || 0
-};
+let extensions; // uBlock Origin and other extensions will be loaded here.
+let adBlocker; // Ad blocker instance
+let adBlockStats = { adsBlocked: 0, trackersBlocked: 0 };
 
 // Tab management class
 class TabManager {
@@ -495,6 +493,13 @@ class TabManager {
 // Create the browser window
 const createWindow = async () => {
   const { width, height } = store.get('windowBounds');
+  const isDark = store.get('theme') === 'dark';
+  
+  // Set up homepage
+  const homepageUrl = await createHomepage();
+  if (store.get('defaultURL') === 'homepage') {
+    store.set('defaultURL', homepageUrl);
+  }
   
   mainWindow = new BrowserWindow({
     width,
@@ -504,17 +509,22 @@ const createWindow = async () => {
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
-      nodeIntegration: false
+      nodeIntegration: false,
+      spellcheck: true
     },
     autoHideMenuBar: true, // Hide menu by default
-    backgroundColor: '#ffffff',
+    backgroundColor: isDark ? '#212121' : '#ffffff',
     icon: path.join(__dirname, 'assets', 'icon.png')
   });
 
   // Setup ad blocker if enabled
   if (store.get('enableAdBlocker')) {
-    await setupAdBlocker();
+    await loadUblockOriginExtension();
   }
+  
+  // Load stats from store
+  adBlockStats.adsBlocked = statsStore.get('adsBlocked') || 0;
+  adBlockStats.trackersBlocked = statsStore.get('trackersBlocked') || 0;
   
   // Extensions feature will be implemented in a future update
   console.log('Extensions support will be added in a future update');
@@ -626,65 +636,21 @@ async function setupAdBlocker() {
     adBlocker.enableBlockingInSession(session.defaultSession);
     
     // Setup request monitoring to count blocked ads and trackers
-    adBlocker.on('request-blocked', (request) => {
-      // Update stats
+    adBlocker.on('request-blocked', ({ url }) => {
       adBlockStats.adsBlocked++;
-      
-      if (request.type === 'image' || request.type === 'media') {
-        // Estimate data saved (rough estimate for demonstration)
-        adBlockStats.dataSaved += Math.floor(Math.random() * 50) + 10; // Random KB between 10-60
-      }
-      
-      if (request.url.includes('tracker') || request.url.includes('analytics') || 
-          request.sourceUrl.includes('google-analytics') || request.type === 'xhr') {
+      if (url.includes('track') || url.includes('analytics') || url.includes('beacon')) {
         adBlockStats.trackersBlocked++;
       }
-      
-      // Update stats store occasionally for performance
-      if (adBlockStats.adsBlocked % 10 === 0) {
-        statsStore.set('adsBlocked', adBlockStats.adsBlocked);
-        statsStore.set('trackersBlocked', adBlockStats.trackersBlocked);
-        statsStore.set('dataSaved', adBlockStats.dataSaved);
-        
-        // Notify renderer of updated stats
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.webContents.send('adblock-stats-updated', adBlockStats);
-        }
-      }
+      // Update stats in store
+      statsStore.set('adsBlocked', statsStore.get('adsBlocked') + 1);
     });
     
-    // Set up content blocking if HTTPS-only mode is enabled
-    if (store.get('httpsOnly')) {
-      setupHttpsOnlyMode();
-    }
-    
-    // Set up blocking for third-party cookies if enabled
-    if (store.get('blockThirdPartyCookies')) {
-      session.defaultSession.cookies.set({
-        blockThirdPartyCookies: true
-      });
-    }
-    
-    // Set up Do Not Track header if enabled
-    if (store.get('doNotTrack')) {
-      session.defaultSession.webRequest.onBeforeSendHeaders((details, callback) => {
-        details.requestHeaders['DNT'] = '1';
-        callback({ requestHeaders: details.requestHeaders });
-      });
-    }
-    
     console.log('Ad blocker initialized successfully');
+    return adBlocker;
   } catch (error) {
-    console.error('Failed to initialize ad blocker:', error);
+    console.error('Failed to set up ad blocker:', error);
+    return null;
   }
-}
-
-// Setup HTTPS-only mode
-function setupHttpsOnlyMode() {
-  session.defaultSession.webRequest.onBeforeRequest({ urls: ['http://*/*'] }, (details, callback) => {
-    const httpsUrl = details.url.replace('http://', 'https://');
-    callback({ redirectURL: httpsUrl });
-  });
 }
 
 // Setup extensions support - simplified for now since electron-extensions isn't installed
@@ -692,6 +658,223 @@ async function setupExtensions() {
   // Extensions will be implemented in a future update
   console.log('Extensions support will be implemented in a future update');
   return;
+}
+
+// Load uBlock Origin extension (simplified version using our ad blocker)
+async function loadUblockOriginExtension() {
+  try {
+    console.log('Setting up ad blocker as uBlock Origin replacement');
+    // We'll use our implementation of adBlocker instead of uBlock Origin
+    return await setupAdBlocker();
+  } catch (error) {
+    console.error('Failed to load ad blocker:', error);
+    return null;
+  }
+}
+
+// Function to create a homepage
+async function createHomepage() {
+  const homepageDir = path.join(__dirname, 'homepage');
+  const homepageFile = path.join(homepageDir, 'index.html');
+  
+  // Create directory if it doesn't exist
+  if (!fs.existsSync(homepageDir)) {
+    fs.mkdirSync(homepageDir, { recursive: true });
+  }
+  
+  // Create homepage file if it doesn't exist
+  if (!fs.existsSync(homepageFile)) {
+    const darkMode = store.get('theme') === 'dark';
+    const searchEngine = store.get('searchEngine');
+    
+    const homepage = `<!DOCTYPE html>
+<html>
+<head>
+  <title>Zen Browser</title>
+  <meta charset="UTF-8">
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background-color: ${darkMode ? '#212121' : '#f5f5f5'};
+      color: ${darkMode ? '#ffffff' : '#212121'};
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+    .container {
+      width: 80%;
+      max-width: 800px;
+      text-align: center;
+    }
+    .logo {
+      font-size: 3rem;
+      font-weight: bold;
+      margin-bottom: 2rem;
+      color: ${darkMode ? '#ffffff' : '#333333'};
+    }
+    .search-box {
+      width: 100%;
+      padding: 1rem;
+      font-size: 1.2rem;
+      border: none;
+      border-radius: 30px;
+      background-color: ${darkMode ? '#333333' : '#ffffff'};
+      color: ${darkMode ? '#ffffff' : '#333333'};
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      outline: none;
+      transition: box-shadow 0.3s ease;
+    }
+    .search-box:focus {
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+    }
+    .bookmarks {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 3rem;
+    }
+    .bookmark {
+      background-color: ${darkMode ? '#333333' : '#ffffff'};
+      border-radius: 10px;
+      padding: 1rem;
+      margin: 0.5rem;
+      width: 100px;
+      height: 100px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+      color: ${darkMode ? '#ffffff' : '#333333'};
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .bookmark:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+    }
+    .bookmark-icon {
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+    }
+    .theme-toggle {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      background: none;
+      border: none;
+      color: ${darkMode ? '#ffffff' : '#333333'};
+      font-size: 1.5rem;
+      cursor: pointer;
+      outline: none;
+    }
+    .footer {
+      margin-top: 3rem;
+      color: ${darkMode ? '#aaaaaa' : '#777777'};
+      font-size: 0.9rem;
+    }
+    @media (max-width: 600px) {
+      .container {
+        width: 90%;
+      }
+      .bookmarks {
+        margin-top: 2rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <button class="theme-toggle" id="themeToggle">${darkMode ? '☀️' : '🌙'}</button>
+  <div class="container">
+    <div class="logo">Zen Browser</div>
+    <form id="searchForm">
+      <input type="text" class="search-box" id="searchBox" placeholder="Search the web..." autofocus>
+    </form>
+    <div class="bookmarks">
+      <a href="https://github.com" class="bookmark">
+        <div class="bookmark-icon">🐙</div>
+        <div>GitHub</div>
+      </a>
+      <a href="https://youtube.com" class="bookmark">
+        <div class="bookmark-icon">📺</div>
+        <div>YouTube</div>
+      </a>
+      <a href="https://twitter.com" class="bookmark">
+        <div class="bookmark-icon">🐦</div>
+        <div>Twitter</div>
+      </a>
+      <a href="https://reddit.com" class="bookmark">
+        <div class="bookmark-icon">👽</div>
+        <div>Reddit</div>
+      </a>
+      <a href="https://news.ycombinator.com" class="bookmark">
+        <div class="bookmark-icon">🔥</div>
+        <div>Hacker News</div>
+      </a>
+      <a href="https://wikipedia.org" class="bookmark">
+        <div class="bookmark-icon">📚</div>
+        <div>Wikipedia</div>
+      </a>
+    </div>
+    <div class="footer">
+      <p>Zen Browser - A lightweight, privacy-focused web browser</p>
+      <p>Ads blocked: <span id="adsBlocked">0</span> | Trackers blocked: <span id="trackersBlocked">0</span></p>
+    </div>
+  </div>
+
+  <script>
+    // Handle search
+    document.getElementById('searchForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const query = document.getElementById('searchBox').value.trim();
+      if (query) {
+        let searchUrl = '';
+        const searchEngine = '${searchEngine}';
+        
+        switch(searchEngine) {
+          case 'google':
+            searchUrl = 'https://www.google.com/search?q=' + encodeURIComponent(query);
+            break;
+          case 'bing':
+            searchUrl = 'https://www.bing.com/search?q=' + encodeURIComponent(query);
+            break;
+          case 'duckduckgo':
+            searchUrl = 'https://duckduckgo.com/?q=' + encodeURIComponent(query);
+            break;
+          case 'yahoo':
+            searchUrl = 'https://search.yahoo.com/search?p=' + encodeURIComponent(query);
+            break;
+          default:
+            searchUrl = 'https://www.google.com/search?q=' + encodeURIComponent(query);
+        }
+        
+        window.location.href = searchUrl;
+      }
+    });
+    
+    // Theme toggle
+    document.getElementById('themeToggle').addEventListener('click', function() {
+      window.electronAPI.toggleTheme();
+    });
+    
+    // Update ad block stats
+    window.electronAPI.onAdBlockStatsUpdated((stats) => {
+      document.getElementById('adsBlocked').textContent = stats.adsBlocked;
+      document.getElementById('trackersBlocked').textContent = stats.trackersBlocked;
+    });
+  </script>
+</body>
+</html>`;
+    
+    fs.writeFileSync(homepageFile, homepage);
+  }
+  
+  return `file://${homepageFile}`;
 }
 
 // Handle app ready event
@@ -720,11 +903,13 @@ ipcMain.handle('update-setting', (event, { key, value }) => {
   
   // Handle special settings that need immediate action
   if (key === 'enableAdBlocker' && value === false) {
-    // Disable ad blocker
-    session.defaultSession.webRequest.onBeforeRequest(null);
+    // Disable ad blocker (unload extension logic needed)
+    if (adBlocker) {
+      adBlocker.disableBlockingInSession(session.defaultSession);
+    }
   } else if (key === 'enableAdBlocker' && value === true) {
     // Re-enable ad blocker
-    setupAdBlocker();
+    loadUblockOriginExtension();
   } else if (key === 'blockThirdPartyCookies') {
     session.defaultSession.cookies.set({
       blockThirdPartyCookies: value
@@ -735,34 +920,47 @@ ipcMain.handle('update-setting', (event, { key, value }) => {
     } else {
       session.defaultSession.webRequest.onBeforeRequest(null);
     }
+  } else if (key === 'theme') {
+    // Update homepage with new theme
+    createHomepage();
+    // If the current URL is the homepage, reload it
+    if (tabManager.activeTabIndex >= 0 && tabManager.tabs[tabManager.activeTabIndex]) {
+      const currentUrl = tabManager.tabs[tabManager.activeTabIndex].view.webContents.getURL();
+      if (currentUrl.includes('homepage')) {
+        tabManager.tabs[tabManager.activeTabIndex].view.webContents.reload();
+      }
+    }
   }
   
   return true;
 });
+
+// Toggle theme between light and dark
+ipcMain.handle('toggle-theme', () => {
+  const currentTheme = store.get('theme');
+  const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+  store.set('theme', newTheme);
+  return newTheme;
+});
+
+// Setup HTTPS only mode
+function setupHttpsOnlyMode() {
+  session.defaultSession.webRequest.onBeforeRequest({ urls: ['http://*/*'] }, (details, callback) => {
+    if (details.url.startsWith('http://') && !details.url.startsWith('http://localhost') && !details.url.includes('127.0.0.1')) {
+      const httpsUrl = details.url.replace('http://', 'https://');
+      callback({ redirectURL: httpsUrl });
+    } else {
+      callback({});
+    }
+  });
+}
 
 ipcMain.handle('reset-settings', () => {
   store.clear();
   return store.store;
 });
 
-ipcMain.handle('get-adblock-stats', () => {
-  return adBlockStats;
-});
 
-ipcMain.handle('reset-adblock-stats', () => {
-  adBlockStats = {
-    adsBlocked: 0,
-    trackersBlocked: 0,
-    dataSaved: 0
-  };
-  
-  statsStore.set('adsBlocked', 0);
-  statsStore.set('trackersBlocked', 0);
-  statsStore.set('dataSaved', 0);
-  statsStore.set('lastReset', Date.now());
-  
-  return adBlockStats;
-});
 
 ipcMain.handle('get-extensions', async () => {
   // Extensions feature will be implemented in a future update

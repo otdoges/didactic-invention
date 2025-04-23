@@ -34,6 +34,7 @@ contextBridge.exposeInMainWorld('browserAPI', {
   getSettings: () => ipcRenderer.invoke('get-settings'),
   updateSetting: (key, value) => ipcRenderer.invoke('update-setting', { key, value }),
   resetSettings: () => ipcRenderer.invoke('reset-settings'),
+  toggleTheme: () => ipcRenderer.invoke('toggle-theme'),
   
   // Event listeners
   onAdBlockStatsUpdated: (callback) => {

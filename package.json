@@ -9,10 +9,15 @@
     "package": "electron-forge package",
     "make": "electron-forge make",
     "publish": "electron-forge publish",
-    "lint": "echo \"No linting configured\"",
-    "install-adblock": "git clone https://github.com/brave/adblock-rust.git && cd adblock-rust && npm install"
+    "lint": "echo \"No linting configured\""
   },
-  "keywords": ["browser", "electron", "tabs", "privacy", "adblock", "zen"],
+  "keywords": [
+    "browser",
+    "electron",
+    "tabs",
+    "privacy",
+    "zen"
+  ],
   "author": {
     "name": "otdoges",
     "email": "otdoges@proton.me"
@@ -24,15 +29,16 @@
     ]
   },
   "dependencies": {
-    "electron-squirrel-startup": "^1.0.1",
-    "electron-localshortcut": "^3.2.1",
-    "electron-store": "^8.1.0",
-    "adblock-rs": "npm:@brave/adblock-rust@^0.4.17",
+    "@cliqz/adblocker-electron": "^1.34.0",
+    "axios": "^1.6.7",
     "cross-fetch": "^4.0.0",
-    "mousetrap": "^1.6.5",
     "electron-extensions": "^7.0.0-beta.3",
+    "electron-localshortcut": "^3.2.1",
+    "electron-squirrel-startup": "^1.0.1",
+    "electron-store": "^8.1.0",
     "fs-extra": "^11.2.0",
-    "axios": "^1.6.7"
+    "mousetrap": "^1.6.5",
+    "node-fetch": "^3.3.2"
   },
   "devDependencies": {
     "@electron-forge/cli": "^7.8.0",
