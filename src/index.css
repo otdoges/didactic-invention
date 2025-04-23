@@ -261,15 +261,16 @@ body {
 .sidebar-btn {
   width: 36px;
   height: 36px;
-  border-radius: 50%;
-  background-color: transparent;
+  border-radius: 8px;
   border: none;
+  background-color: transparent;
   color: var(--sidebar-text);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   transition: background-color 0.2s ease, transform 0.2s ease;
+  margin: 4px;
 }
 
 .sidebar-btn:hover {
@@ -287,7 +288,7 @@ body {
   margin: 8px;
   cursor: pointer;
   border-radius: 8px;
-  transition: background-color 0.2s ease;
+  transition: background-color 0.2s, transform 0.2s;
   font-family: var(--font-family);
   font-size: var(--font-size-base);
 }
@@ -308,31 +309,11 @@ body {
   background-color: var(--tab-bg);
 }
 
-.sidebar-btn::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 0;
-  height: 0;
-  background-color: rgba(255, 255, 255, 0.3);
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-  transition: width 0.4s ease-out, height 0.4s ease-out, opacity 0.4s ease-out;
-  opacity: 0;
-  z-index: -1;
-}
-
-.sidebar-btn:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-  transform: translateY(-2px);
-}
-
-.sidebar-btn:active::after {
-  width: 120px;
-  height: 120px;
-  opacity: 1;
-  transition: width 0.3s ease-out, height 0.3s ease-out, opacity 0.1s;
+.icon {
+  width: 20px;
+  height: 20px;
+  display: block;
+  object-fit: contain;
 }
 
 .tab-item {
@@ -343,30 +324,26 @@ body {
   height: 36px;
   background-color: var(--tab-bg);
   color: var(--sidebar-text);
-  border-radius: 6px;
+  border-radius: 8px;
   margin: 4px 8px;
   padding: 0 12px;
   cursor: pointer;
-  font-size: var(--font-size-small);
+  transition: background-color 0.2s, transform 0.1s;
   overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  transition: background-color 0.2s ease;
   position: relative;
-}
-
-@keyframes tabEnter {
-  from { transform: translateX(-20px); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .tab-item:hover {
   background-color: var(--tab-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
 }
 
 .tab-item.active {
-  background-color: var(--tab-hover);
-  position: relative;
+  background-color: var(--accent-color);
+  color: white;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
 }
 
 .tab-item.active::before {
@@ -513,14 +490,13 @@ body {
   flex: 1;
   display: flex;
   align-items: center;
-  background-color: var(--bg-secondary);
+  background-color: #333;
   border-radius: 24px;
-  padding: 0 10px;
+  padding: 0 14px;
   margin: 0 10px;
   height: 44px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   transition: box-shadow 0.2s ease, background-color 0.3s ease;
-  background-color: #333;
 }
 
 #address-bar:focus-within {
@@ -529,8 +505,10 @@ body {
 }
 
 .url-icon {
-  color: #8ab4f8;
+  width: 20px;
+  height: 20px;
   opacity: 0.8;
+  margin-right: 8px;
 }
 
 .address-actions {
